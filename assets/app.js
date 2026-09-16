@@ -30,7 +30,7 @@ if(document.body.dataset.page==="form"){
   render();
   $("edit-again").onclick=()=>$("success").classList.add("hidden");
   $("submit").onclick=async()=>{
-    const name=$("name").value.trim();if(!name)return toast("请先填写姓名");if(!selected.size)return toast("请至少选择一个时段");
+    const name=$("name").value.trim();if(!name)return toast("请先填写社内 ID");if(!selected.size)return toast("请至少选择一个时段");
     $("submit").disabled=true;$("submit").textContent="正在保存…";
     try{
       const result=await rpc("submit_program_review",{p_id:saved?.id||null,p_edit_token:saved?.editToken||null,p_name:name,p_group_name:$("group").value.trim(),p_note:$("note").value.trim(),p_slots:[...selected].sort()});
@@ -59,9 +59,9 @@ if(document.body.dataset.page==="stats"){
     const chosen=person();
     if(chosen){
       const group=escapeHtml(chosen.group_name||"未填写组别"),note=chosen.note?'<div class="person-note">'+escapeHtml(chosen.note)+'</div>':"";
-      if(!active){$("roster").innerHTML='<small>个人时间</small><h2>'+escapeHtml(chosen.name)+'</h2><h3>'+group+'</h3><div class="roster-count"><b>'+durationLabel(chosen.slots.length)+'</b><span>共可到场</span></div>'+note;return}
+      if(!active){$("roster").innerHTML='<small>社内 ID</small><h2>'+escapeHtml(chosen.name)+'</h2><h3>'+group+'</h3><div class="roster-count"><b>'+durationLabel(chosen.slots.length)+'</b><span>共可到场</span></div>'+note;return}
       const day=DAYS.find(item=>active.startsWith(item.date)),time=active.slice(11),available=chosen.slots.includes(active);
-      $("roster").innerHTML='<small>个人时间</small><h2>'+escapeHtml(chosen.name)+'</h2><h3>'+day.label+" "+time+"—"+end(time)+'</h3><div class="roster-count status"><b>'+(available?"可以到场":"无法到场")+'</b></div><div class="person-note">'+group+'</div>'+note;return
+      $("roster").innerHTML='<small>社内 ID</small><h2>'+escapeHtml(chosen.name)+'</h2><h3>'+day.label+" "+time+"—"+end(time)+'</h3><div class="roster-count status"><b>'+(available?"可以到场":"无法到场")+'</b></div><div class="person-note">'+group+'</div>'+note;return
     }
     if(!active){$("roster").innerHTML='<div class="empty"><b>▦</b><h2>选择一个时段</h2><p>点击热力表中的数字查看对应人员。</p></div>';return}
     const people=rows.filter(p=>p.slots.includes(active)),day=DAYS.find(d=>active.startsWith(d.date)),time=active.slice(11);
