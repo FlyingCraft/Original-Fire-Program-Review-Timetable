@@ -14,8 +14,10 @@ function bindSwitch(id,current,onChange){const root=$(id);root.querySelectorAll(
 function durationLabel(slotCount){const hours=slotCount/2;return Number.isInteger(hours)?hours+" 小时":hours.toFixed(1)+" 小时"}
 
 if(document.body.dataset.page==="form"){
-  const selected=new Set(JSON.parse(localStorage.getItem("of29-slots")||"[]"));
+  const selected=new Set();
   let granularity=Number(localStorage.getItem("of29-form-granularity")||30);
+  localStorage.removeItem("of29-response");
+  localStorage.removeItem("of29-slots");
   function renderThirty(){return TIMES.map((time,i)=>'<div class="grid-row"><div class="time-label '+(i%2?"half":"")+'">'+(i%2?"":time)+'</div>'+DAYS.map(day=>{const slot=key(day.date,time);return '<button class="slot '+(selected.has(slot)?"selected":"")+'" data-slot="'+slot+'" aria-label="'+day.label+" "+time+"至"+end(time)+'">'+(selected.has(slot)?"✓":"")+'</button>'}).join("")+'</div>').join("")}
   function renderHours(){return HOURS.map(time=>'<div class="grid-row"><div class="time-label hour">'+time+'</div>'+DAYS.map(day=>{const first=key(day.date,time),second=key(day.date,end(time));return '<button class="hour-slot" data-first="'+first+'" data-second="'+second+'" aria-label="'+day.label+" "+time+"至"+end(end(time))+'"><span class="hour-half '+(selected.has(first)?"selected":"")+'">✓</span><span class="hour-half '+(selected.has(second)?"selected":"")+'">✓</span></button>'}).join("")+'</div>').join("")}
   function render(){
@@ -25,19 +27,21 @@ if(document.body.dataset.page==="form"){
     document.querySelectorAll(".hour-slot").forEach(button=>button.onclick=()=>{const slots=[button.dataset.first,button.dataset.second],both=slots.every(slot=>selected.has(slot));slots.forEach(slot=>both?selected.delete(slot):selected.add(slot));render()});
   }
   bindSwitch("form-granularity",granularity,next=>{granularity=next;localStorage.setItem("of29-form-granularity",next);render()});
-  let saved=JSON.parse(localStorage.getItem("of29-response")||"null");
-  if(saved){$("existing").classList.remove("hidden");$("name").value=saved.name||"";$("group").value=saved.group||"";$("note").value=saved.note||"";$("submit").textContent="更新我的时间"}
   render();
   $("edit-again").onclick=()=>$("success").classList.add("hidden");
   $("submit").onclick=async()=>{
-    const name=$("name").value.trim();if(!name)return toast("请先填写社内 ID");if(!selected.size)return toast("请至少选择一个时段");
+    const internalId=$("name").value.trim(),modificationCode=$("group").value;
+    if(!internalId)return toast("请先填写社内 ID");
+    if(modificationCode.length<4)return toast("修改码至少需要 4 位");
+    if(!selected.size)return toast("请至少选择一个时段");
     $("submit").disabled=true;$("submit").textContent="正在保存…";
     try{
-      const result=await rpc("submit_program_review",{p_id:saved?.id||null,p_edit_token:saved?.editToken||null,p_name:name,p_group_name:$("group").value.trim(),p_note:$("note").value.trim(),p_slots:[...selected].sort()});
-      const record={id:result.id,editToken:result.edit_token,name,group:$("group").value.trim(),note:$("note").value.trim()};
-      localStorage.setItem("of29-response",JSON.stringify(record));localStorage.setItem("of29-slots",JSON.stringify([...selected]));saved=record;
-      $("existing").classList.remove("hidden");$("success").classList.remove("hidden");window.scrollTo({top:0,behavior:"smooth"});
-    }catch(error){toast(error.message||"保存失败，请稍后重试")}finally{$("submit").disabled=false;$("submit").textContent=saved?"更新我的时间":"提交可用时间"}
+      await rpc("submit_program_review",{p_id:null,p_edit_token:null,p_name:internalId,p_group_name:modificationCode,p_note:$("note").value.trim(),p_slots:[...selected].sort()});
+      $("success").classList.remove("hidden");window.scrollTo({top:0,behavior:"smooth"});
+    }catch(error){
+      const message=String(error.message||"");
+      toast(message.includes("modification code")?"社内 ID 或修改码不正确":"保存失败，请稍后重试");
+    }finally{$("submit").disabled=false;$("submit").textContent="提交 / 更新可用时间"}
   };
 }
 
@@ -58,16 +62,16 @@ if(document.body.dataset.page==="stats"){
   function renderRoster(){
     const chosen=person();
     if(chosen){
-      const group=escapeHtml(chosen.group_name||"未填写组别"),note=chosen.note?'<div class="person-note">'+escapeHtml(chosen.note)+'</div>':"";
-      if(!active){$("roster").innerHTML='<small>社内 ID</small><h2>'+escapeHtml(chosen.name)+'</h2><h3>'+group+'</h3><div class="roster-count"><b>'+durationLabel(chosen.slots.length)+'</b><span>共可到场</span></div>'+note;return}
+      const note=chosen.note?'<div class="person-note">'+escapeHtml(chosen.note)+'</div>':"";
+      if(!active){$("roster").innerHTML='<small>社内 ID</small><h2>'+escapeHtml(chosen.name)+'</h2><div class="roster-count"><b>'+durationLabel(chosen.slots.length)+'</b><span>共可到场</span></div>'+note;return}
       const day=DAYS.find(item=>active.startsWith(item.date)),time=active.slice(11),available=chosen.slots.includes(active);
-      $("roster").innerHTML='<small>社内 ID</small><h2>'+escapeHtml(chosen.name)+'</h2><h3>'+day.label+" "+time+"—"+end(time)+'</h3><div class="roster-count status"><b>'+(available?"可以到场":"无法到场")+'</b></div><div class="person-note">'+group+'</div>'+note;return
+      $("roster").innerHTML='<small>社内 ID</small><h2>'+escapeHtml(chosen.name)+'</h2><h3>'+day.label+" "+time+"—"+end(time)+'</h3><div class="roster-count status"><b>'+(available?"可以到场":"无法到场")+'</b></div>'+note;return
     }
     if(!active){$("roster").innerHTML='<div class="empty"><b>▦</b><h2>选择一个时段</h2><p>点击热力表中的数字查看对应人员。</p></div>';return}
     const people=rows.filter(p=>p.slots.includes(active)),day=DAYS.find(d=>active.startsWith(d.date)),time=active.slice(11);
-    $("roster").innerHTML='<small>所选时段</small><h2>'+day.label+'</h2><h3>'+time+"—"+end(time)+'</h3><div class="roster-count"><b>'+people.length+'</b><span>人可到场</span></div><div class="people">'+people.map(p=>'<div class="person"><span class="avatar">'+escapeHtml(p.name.slice(0,1))+'</span><div><strong>'+escapeHtml(p.name)+'</strong><small>'+escapeHtml(p.group_name||"未填写组别")+(p.note?" · "+escapeHtml(p.note):"")+'</small></div></div>').join("")+'</div>';
+    $("roster").innerHTML='<small>所选时段</small><h2>'+day.label+'</h2><h3>'+time+"—"+end(time)+'</h3><div class="roster-count"><b>'+people.length+'</b><span>人可到场</span></div><div class="people">'+people.map(p=>'<div class="person"><span class="avatar">'+escapeHtml(p.name.slice(0,1))+'</span><div><strong>'+escapeHtml(p.name)+'</strong><small>'+(p.note?escapeHtml(p.note):"无补充说明")+'</small></div></div>').join("")+'</div>';
   }
-  function populatePeople(){const current=$("person-filter").value;$("person-filter").innerHTML='<option value="">全部人员</option>'+[...rows].sort((a,b)=>a.name.localeCompare(b.name,"zh-CN")).map(p=>'<option value="'+p.id+'">'+escapeHtml(p.name)+(p.group_name?" · "+escapeHtml(p.group_name):"")+'</option>').join("");if(rows.some(row=>row.id===current))$("person-filter").value=current}
+  function populatePeople(){const current=$("person-filter").value;$("person-filter").innerHTML='<option value="">全部人员</option>'+[...rows].sort((a,b)=>a.name.localeCompare(b.name,"zh-CN")).map(p=>'<option value="'+p.id+'">'+escapeHtml(p.name)+'</option>').join("");if(rows.some(row=>row.id===current))$("person-filter").value=current}
   async function load(){
     const adminKey=$("admin-key").value||sessionStorage.getItem("of29-admin-key");if(!adminKey)return;
     try{rows=await rpc("get_program_review_stats",{p_admin_key:adminKey});sessionStorage.setItem("of29-admin-key",adminKey);$("login-card").classList.add("hidden");$("stats-card").classList.remove("hidden");$("roster").classList.remove("hidden");$("total").textContent=rows.length+" 份提交";populatePeople();renderStats();renderRoster()}
