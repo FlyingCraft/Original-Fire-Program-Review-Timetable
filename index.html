@@ -11,11 +11,11 @@
   <header class="topbar"><span class="logo">✓</span><div><small>PROGRAM REVIEW</small><h1>节目审核时间统计</h1></div></header>
   <main class="shell">
     <section id="success" class="notice hidden"><b>✓</b><div><strong>时间已保存</strong><p>负责人会根据整体情况另行通知审核安排。</p></div><button id="edit-again">继续修改</button></section>
-    <section class="intro"><div class="date"><span>SEP</span><strong>25—27</strong><em>2026</em></div><div><h2>勾选所有能够到场的时间</h2><p>每格代表 30 分钟，可以跨日期、跨时段多选。提交后仍可在本设备修改。</p></div></section>
+    <section class="intro"><div class="date"><span>SEP</span><strong>25—27</strong><em>2026</em></div><div><h2>勾选所有能够到场的时间</h2><p>可切换 30 分钟或 1 小时选择。提交后仍可在本设备修改。</p></div></section>
     <section class="card">
       <div class="heading"><b>01</b><h2>你的信息</h2><small id="existing" class="hidden">✓ 已找到此前提交</small></div>
       <div class="fields"><label>姓名 <i>*</i><input id="name" maxlength="30" placeholder="怎么称呼你"></label><label>节目 / 组别<input id="group" maxlength="50" placeholder="选填，便于负责人识别"></label></div>
-      <div class="heading"><b>02</b><h2>可到场时段</h2><small id="selected-count">已选 0 格 · 共 0 分钟</small></div>
+      <div class="heading"><b>02</b><h2>可到场时段</h2><div class="heading-actions"><small id="selected-count">已选 0 格 · 共 0 分钟</small><div id="form-granularity" class="view-switch" aria-label="时间粒度"><button class="active" data-minutes="30">30 分钟</button><button data-minutes="60">1 小时</button></div></div></div>
       <div class="table-scroll"><div id="picker" class="time-grid"></div></div>
       <label class="note">补充说明<textarea id="note" maxlength="200" placeholder="例如：19:30 后才能到、需要提前离场……"></textarea></label>
       <div class="submit"><p>请尽量多选，方便安排共同时间</p><button id="submit">提交可用时间</button></div>
