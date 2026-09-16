@@ -5,19 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>节目审核 · 到场统计</title>
-  <link rel="stylesheet" href="../assets/styles.css">
+  <link rel="stylesheet" href="../assets/styles.css?v=4">
 </head>
-<body data-page="stats">
+<body data-page="stats" data-granularity="30">
   <header class="topbar"><span class="logo">▦</span><div><small>ORGANIZER VIEW</small><h1>节目审核 · 到场统计</h1></div><span id="total" class="pill">尚未载入</span></header>
   <main class="stats-shell">
     <section id="login-card" class="login-card"><h2>负责人验证</h2><p>输入管理员密钥后读取统计数据。密钥只在本次浏览器会话中保存。</p><div><input id="admin-key" type="password" placeholder="管理员密钥"><button id="load-stats">查看统计</button></div><small id="login-error"></small></section>
     <section id="stats-card" class="card stats-card hidden">
-      <div class="stats-title"><div><h2 id="stats-heading">各时段可到场人数</h2><p id="stats-description">颜色越深，人数越多；点击格子查看名单。</p></div><div class="stats-controls"><label class="person-filter">查看对象<select id="person-filter"><option value="">全部人员</option></select></label><div id="stats-granularity" class="view-switch" aria-label="时间粒度"><button class="active" data-minutes="30">30 分钟</button><button data-minutes="60">1 小时</button></div><button id="refresh" class="refresh-button">刷新</button></div></div>
+      <div class="stats-title"><div><h2 id="stats-heading">各时段可到场人数</h2><p id="stats-description">颜色越深，人数越多；点击格子查看名单。</p></div><div class="stats-controls"><label class="person-filter">查看对象<select id="person-filter"><option value="">全部人员</option></select></label><nav class="view-switch" aria-label="时间粒度"><a class="active" href="./">30 分钟</a><a href="./hour/">1 小时</a></nav><button id="refresh" class="refresh-button">刷新</button></div></div>
       <div class="table-scroll"><div id="heatmap" class="time-grid"></div></div>
     </section>
     <aside id="roster" class="roster hidden"><div class="empty"><b>▦</b><h2>选择一个时段</h2><p>点击热力表中的数字查看对应人员。</p></div></aside>
   </main>
   <div id="toast" class="toast hidden"></div>
-  <script src="../assets/app.js"></script>
+  <script src="../assets/app.js?v=4"></script>
 </body>
 </html>
