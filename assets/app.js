@@ -10,11 +10,12 @@ function toast(message){$("toast").textContent=message;$("toast").classList.remo
 async function rpc(name,body){const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+name,{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},body:JSON.stringify(body)});const data=await response.json().catch(()=>null);if(!response.ok)throw new Error(data?.message||"请求失败");return data}
 function headers(){return '<div class="corner">时间</div>'+DAYS.map(d=>'<div class="date-head"><span>'+d.weekday+'</span><strong>'+d.label+'</strong></div>').join("")}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function bindSwitch(id,current,onChange){const root=$(id);root.querySelectorAll("button").forEach(button=>{button.classList.toggle("active",Number(button.dataset.minutes)===current);button.onclick=()=>{const next=Number(button.dataset.minutes);root.querySelectorAll("button").forEach(item=>item.classList.toggle("active",item===button));onChange(next)}})}
 function durationLabel(slotCount){const hours=slotCount/2;return Number.isInteger(hours)?hours+" 小时":hours.toFixed(1)+" 小时"}
 
 if(document.body.dataset.page==="form"){
   const selected=new Set(JSON.parse(localStorage.getItem("of29-slots")||"[]"));
-  const granularity=Number(document.body.dataset.granularity||30);
+  let granularity=Number(localStorage.getItem("of29-form-granularity")||30);
   function renderThirty(){return TIMES.map((time,i)=>'<div class="grid-row"><div class="time-label '+(i%2?"half":"")+'">'+(i%2?"":time)+'</div>'+DAYS.map(day=>{const slot=key(day.date,time);return '<button class="slot '+(selected.has(slot)?"selected":"")+'" data-slot="'+slot+'" aria-label="'+day.label+" "+time+"至"+end(time)+'">'+(selected.has(slot)?"✓":"")+'</button>'}).join("")+'</div>').join("")}
   function renderHours(){return HOURS.map(time=>'<div class="grid-row"><div class="time-label hour">'+time+'</div>'+DAYS.map(day=>{const first=key(day.date,time),second=key(day.date,end(time));return '<button class="hour-slot" data-first="'+first+'" data-second="'+second+'" aria-label="'+day.label+" "+time+"至"+end(end(time))+'"><span class="hour-half '+(selected.has(first)?"selected":"")+'">✓</span><span class="hour-half '+(selected.has(second)?"selected":"")+'">✓</span></button>'}).join("")+'</div>').join("")}
   function render(){
@@ -23,6 +24,7 @@ if(document.body.dataset.page==="form"){
     document.querySelectorAll(".slot").forEach(button=>button.onclick=()=>{const slot=button.dataset.slot;selected.has(slot)?selected.delete(slot):selected.add(slot);render()});
     document.querySelectorAll(".hour-slot").forEach(button=>button.onclick=()=>{const slots=[button.dataset.first,button.dataset.second],both=slots.every(slot=>selected.has(slot));slots.forEach(slot=>both?selected.delete(slot):selected.add(slot));render()});
   }
+  bindSwitch("form-granularity",granularity,next=>{granularity=next;localStorage.setItem("of29-form-granularity",next);render()});
   let saved=JSON.parse(localStorage.getItem("of29-response")||"null");
   if(saved){$("existing").classList.remove("hidden");$("name").value=saved.name||"";$("group").value=saved.group||"";$("note").value=saved.note||"";$("submit").textContent="更新我的时间"}
   render();
@@ -40,7 +42,7 @@ if(document.body.dataset.page==="form"){
 }
 
 if(document.body.dataset.page==="stats"){
-  let rows=[],active=null;const granularity=Number(document.body.dataset.granularity||30);
+  let rows=[],active=null,granularity=Number(localStorage.getItem("of29-stats-granularity")||30);
   const person=()=>rows.find(row=>row.id===$("person-filter").value);
   function heat(count,max){if(!count)return"h0";const ratio=count/Math.max(max,1);return ratio>.8?"h5":ratio>.6?"h4":ratio>.4?"h3":ratio>.2?"h2":"h1"}
   function cell(slot,count,max,segment=false){const individual=Boolean(person()),className=segment?"heat-segment":"heat";return '<button class="'+className+" "+(individual?(count?"personal-on":"h0"):heat(count,max))+(active===slot?" active":"")+'" data-slot="'+slot+'"><strong>'+(count?(individual?"✓":count):"")+'</strong></button>'}
@@ -71,6 +73,7 @@ if(document.body.dataset.page==="stats"){
     try{rows=await rpc("get_program_review_stats",{p_admin_key:adminKey});sessionStorage.setItem("of29-admin-key",adminKey);$("login-card").classList.add("hidden");$("stats-card").classList.remove("hidden");$("roster").classList.remove("hidden");$("total").textContent=rows.length+" 份提交";populatePeople();renderStats();renderRoster()}
     catch{$("login-error").textContent="管理员密钥不正确，或网络连接失败。"}
   }
+  bindSwitch("stats-granularity",granularity,next=>{granularity=next;localStorage.setItem("of29-stats-granularity",next);renderStats()});
   $("person-filter").onchange=()=>{active=null;renderStats();renderRoster()};$("load-stats").onclick=load;$("admin-key").onkeydown=e=>{if(e.key==="Enter")load()};$("refresh").onclick=load;
   if(sessionStorage.getItem("of29-admin-key")){$("admin-key").value=sessionStorage.getItem("of29-admin-key");load()}
 }
