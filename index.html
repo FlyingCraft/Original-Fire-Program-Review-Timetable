@@ -15,13 +15,13 @@
     <section class="card">
       <div class="heading"><b>01</b><h2>你的信息</h2><small>仅通过 ID 与修改码识别</small></div>
       <div class="fields"><label>社内 ID <i>*</i><input id="name" maxlength="30" placeholder="请输入社内 ID" autocomplete="username" spellcheck="false"></label><label>修改码 <i>*</i><input id="group" type="password" minlength="4" maxlength="50" placeholder="至少 4 位，请妥善保存" autocomplete="current-password"></label></div>
-      <div class="heading"><b>02</b><h2>可到场时段</h2><div class="heading-actions"><small id="selected-count">已选 0 格 · 共 0 分钟</small><div id="form-granularity" class="view-switch" aria-label="时间粒度"><button class="active" data-minutes="30">30 分钟</button><button data-minutes="60">1 小时</button></div></div></div>
+      <div class="heading"><b>02</b><h2>可到场时段</h2><div class="heading-actions"><small id="selected-count">已选 0 小时，可在右侧切换选择时段长度</small><div id="form-granularity" class="view-switch" aria-label="时间粒度"><button class="active" data-minutes="30">30 分钟</button><button data-minutes="60">1 小时</button></div></div></div>
       <div class="table-scroll"><div id="picker" class="time-grid"></div></div>
       <label class="note">补充说明<textarea id="note" maxlength="200" placeholder="例如：19:30 后才能到、需要提前离场……"></textarea></label>
       <div class="submit"><p>请尽量多选，方便安排共同时间</p><button id="submit">提交 / 更新可用时间</button></div>
     </section>
   </main>
   <div id="toast" class="toast hidden"></div>
-  <script src="./assets/app.js?v=6"></script>
+  <script src="./assets/app.js?v=9"></script>
 </body>
 </html>
