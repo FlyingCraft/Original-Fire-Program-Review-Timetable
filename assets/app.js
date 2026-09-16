@@ -22,7 +22,7 @@ if(document.body.dataset.page==="form"){
   function renderHours(){return HOURS.map(time=>'<div class="grid-row"><div class="time-label hour">'+time+'</div>'+DAYS.map(day=>{const first=key(day.date,time),second=key(day.date,end(time));return '<button class="hour-slot" data-first="'+first+'" data-second="'+second+'" aria-label="'+day.label+" "+time+"至"+end(end(time))+'"><span class="hour-half '+(selected.has(first)?"selected":"")+'">✓</span><span class="hour-half '+(selected.has(second)?"selected":"")+'">✓</span></button>'}).join("")+'</div>').join("")}
   function render(){
     $("picker").innerHTML=headers()+(granularity===30?renderThirty():renderHours())+'<div class="end-label">22:00</div>';
-    $("selected-count").textContent="已选 "+selected.size+" 个半小时 · 共 "+durationLabel(selected.size);
+    $("selected-count").textContent="已选 "+durationLabel(selected.size)+"，可在右侧切换选择时段长度";
     document.querySelectorAll(".slot").forEach(button=>button.onclick=()=>{const slot=button.dataset.slot;selected.has(slot)?selected.delete(slot):selected.add(slot);render()});
     document.querySelectorAll(".hour-slot").forEach(button=>button.onclick=()=>{const slots=[button.dataset.first,button.dataset.second],both=slots.every(slot=>selected.has(slot));slots.forEach(slot=>both?selected.delete(slot):selected.add(slot));render()});
   }
