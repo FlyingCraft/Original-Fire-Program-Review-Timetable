@@ -28,3 +28,5 @@
 .record-actions .danger{border-color:#edc8cd;color:#b43143}
 .records-empty{padding:50px 20px;text-align:center;color:#83908b}
 @media(max-width:720px){.records-title{align-items:flex-start;flex-direction:column}.record-editor{grid-template-columns:1fr}.record-actions button{flex:1}.record-actions{width:100%}}
+
+.code-badge{max-width:55%;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
