@@ -20,12 +20,16 @@ function buildSchedule(config){
     const [y,m,d]=date.split("-").map(Number),weekday=["周日","周一","周二","周三","周四","周五","周六"][new Date(Date.UTC(y,m-1,d)).getUTCDay()];
     DAYS.push({date,weekday,label:m+"月"+d+"日"});
   }
-  const hiddenDates=new Set((Array.isArray(config.unavailable)?config.unavailable:[])
-    .filter(rule=>rule&&rule.date&&(!rule.start_time||!rule.end_time))
-    .map(rule=>rule.date));
-  DAYS=DAYS.filter(day=>!hiddenDates.has(day.date));
   TIMES=[];
   for(let value=minutes(config.start_time);value<minutes(config.end_time);value+=30)TIMES.push(timeFromMinutes(value));
+  const unavailable=Array.isArray(config.unavailable)?config.unavailable:[];
+  const slotIsBlocked=(date,time)=>unavailable.some(rule=>{
+    if(!rule||rule.date!==date)return false;
+    if(!rule.start_time||!rule.end_time)return true;
+    const value=minutes(time);
+    return value>=minutes(rule.start_time)&&value<minutes(rule.end_time);
+  });
+  DAYS=DAYS.filter(day=>!TIMES.length||!TIMES.every(time=>slotIsBlocked(day.date,time)));
   HOURS=TIMES.filter((_,index)=>index%2===0);
 }
 async function loadSchedule(){
