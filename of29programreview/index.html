@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>节目审核 · 到场统计</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=15">
+  <link rel="stylesheet" href="../assets/styles.css?v=16">
   <link rel="stylesheet" href="../assets/unavailable.css?v=1">
 </head>
 <body data-page="stats">
@@ -23,6 +23,12 @@
     </section>
     <section id="schedule-card" class="card schedule-card hidden">
       <div class="schedule-title"><div><h2>问卷时间设置</h2><p>保存后，填写页和热力统计会立即使用新的日期与每日时段。</p></div><span id="schedule-current"></span></div>
+      <section class="pause-editor">
+        <div class="pause-editor-heading"><div><h3>问卷状态</h3><p>暂停后保留现有数据和填写者的本地草稿，但拒绝新的提交与更新。</p></div><span id="pause-status">开放中</span></div>
+        <label class="pause-toggle"><input id="schedule-paused" type="checkbox"><span>暂停接收提交</span></label>
+        <label>暂停提示文字<input id="pause-message" maxlength="120" placeholder="问卷暂时停止填写，请等待管理员重新开放。"></label>
+        <div class="pause-editor-actions"><p>取消勾选并保存即可重新开放问卷。</p><button id="save-pause" type="button">保存问卷状态</button></div>
+      </section>
       <div class="schedule-editor">
         <label>开始日期<input id="schedule-start-date" type="date"></label>
         <label>结束日期<input id="schedule-end-date" type="date"></label>
@@ -44,7 +50,7 @@
     <aside id="roster" class="roster hidden"><div class="empty"><b>▦</b><h2>选择一个时段</h2><p>点击热力表中的数字查看对应人员。</p></div></aside>
   </main>
   <div id="toast" class="toast hidden"></div>
-  <script src="../assets/app.js?v=16"></script>
+  <script src="../assets/app.js?v=18"></script>
   <script src="../assets/unavailable.js?v=3"></script>
 </body>
 </html>

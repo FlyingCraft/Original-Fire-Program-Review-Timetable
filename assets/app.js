@@ -107,6 +107,12 @@ if(document.body.dataset.page==="form"){
     (Array.isArray(draft.slots)?draft.slots:[]).filter(slotAllowed).forEach(slot=>selected.add(slot));
     saveDraft();
   }
+  function applyPauseState(){
+    const paused=Boolean(SCHEDULE?.is_paused),notice=$("pause-notice"),button=$("submit");
+    notice.classList.toggle("hidden",!paused);
+    $("pause-notice-message").textContent=String(SCHEDULE?.pause_message||"").trim()||"问卷暂时停止填写，请等待管理员重新开放。";
+    button.disabled=paused;button.textContent=paused?"问卷已暂停":"提交 / 更新可用时间";
+  }
   function renderThirty(){return TIMES.map((time,i)=>'<div class="grid-row"><div class="time-label '+(i%2?"half":"")+'">'+(i%2?"":time)+'</div>'+DAYS.map(day=>{const slot=key(day.date,time);return '<button class="slot '+(selected.has(slot)?"selected":"")+'" data-slot="'+slot+'" aria-label="'+day.label+" "+time+"至"+addMinutes(time)+'">'+(selected.has(slot)?"✓":"")+'</button>'}).join("")+'</div>').join("")}
   function renderHours(){return HOURS.map(time=>{const index=TIMES.indexOf(time),secondTime=TIMES[index+1]||null;return '<div class="grid-row"><div class="time-label hour">'+time+'</div>'+DAYS.map(day=>{const first=key(day.date,time),second=secondTime?key(day.date,secondTime):"",slots=second?[first,second]:[first],finish=secondTime?addMinutes(secondTime):addMinutes(time);return '<button class="hour-slot" data-slots="'+slots.join("|")+'" aria-label="'+day.label+" "+time+"至"+finish+'"><span class="hour-half '+(selected.has(first)?"selected":"")+'">✓</span>'+(second?'<span class="hour-half '+(selected.has(second)?"selected":"")+'">✓</span>':'<span class="hour-half disabled"></span>')+'</button>'}).join("")+'</div>'}).join("")}
   function render(){
@@ -121,13 +127,14 @@ if(document.body.dataset.page==="form"){
   $("group").addEventListener("input",saveDraft);
   $("edit-again").onclick=()=>$("success").classList.add("hidden");
   $("submit").disabled=true;
-  loadSchedule().then(()=>{restoreDraft();updateFormIntro();render();$("submit").disabled=false}).catch(error=>{
+  loadSchedule().then(()=>{restoreDraft();updateFormIntro();render();applyPauseState()}).catch(error=>{
     toast("时间设置读取失败，请刷新页面");
     $("schedule-range").textContent="读取失败";$("schedule-year").textContent="—";
     $("schedule-detail").textContent=String(error.message||"").includes("超时")?"连接数据库超时，请检查网络后刷新页面。":"暂时无法读取当前开放时间。";
     $("picker").innerHTML='<div class="schedule-load-error">暂时无法读取可选时间，请刷新页面重试。</div>';
   });
   $("submit").onclick=async()=>{
+    if(SCHEDULE?.is_paused)return toast("问卷已暂停，当前无法提交");
     const internalId=$("name").value.trim(),modificationCode=$("group").value;
     if(!internalId)return toast("请先填写社内 ID");
     if(modificationCode.length<4)return toast("修改码至少需要 4 位");
@@ -139,8 +146,8 @@ if(document.body.dataset.page==="form"){
       $("success").classList.remove("hidden");window.scrollTo({top:0,behavior:"smooth"});
     }catch(error){
       const message=String(error.message||"");
-      toast(message.includes("modification code")?"社内 ID 或修改码不正确":message.includes("slot")?"所选时间已不在当前开放范围，请刷新页面后重选":"保存失败，请稍后重试");
-    }finally{$("submit").disabled=false;$("submit").textContent="提交 / 更新可用时间"}
+      toast(message.includes("questionnaire paused")?"问卷已暂停，当前无法提交":message.includes("modification code")?"社内 ID 或修改码不正确":message.includes("slot")?"所选时间已不在当前开放范围，请刷新页面后重选":"保存失败，请稍后重试");
+    }finally{applyPauseState()}
   };
 }
 
@@ -189,7 +196,20 @@ if(document.body.dataset.page==="stats"){
     $("schedule-current").textContent=scheduleSummary();
     $("schedule-intro-text").value=String(SCHEDULE.intro_text||"");
     $("schedule-intro-text").placeholder="当前开放 "+DAYS.length+" 天，每天 "+SCHEDULE.start_time+"—"+SCHEDULE.end_time+"。";
+    $("schedule-paused").checked=Boolean(SCHEDULE.is_paused);
+    $("pause-message").value=String(SCHEDULE.pause_message||"");
+    $("pause-status").textContent=SCHEDULE.is_paused?"已暂停":"开放中";
+    $("pause-status").classList.toggle("paused",Boolean(SCHEDULE.is_paused));
     renderDateNotesEditor();
+  }
+  async function savePause(){
+    const paused=$("schedule-paused").checked,message=$("pause-message").value.trim(),button=$("save-pause");
+    button.disabled=true;button.textContent="正在保存…";
+    try{
+      await rpc("update_program_review_pause",{p_admin_key:adminKey(),p_is_paused:paused,p_pause_message:message});
+      await loadData();toast(paused?"问卷已暂停":"问卷已重新开放");
+    }catch(error){toast(String(error.message||"").includes("too long")?"暂停提示最多 120 个字":"问卷状态保存失败")}
+    finally{button.disabled=false;button.textContent="保存问卷状态"}
   }
   async function saveIntroText(){
     const value=$("schedule-intro-text").value.trim(),button=$("save-intro-text");
@@ -272,6 +292,7 @@ if(document.body.dataset.page==="stats"){
   $("refresh").onclick=()=>loadData().catch(()=>toast("刷新失败"));
   $("records-refresh").onclick=()=>loadData().catch(()=>toast("刷新失败"));
   $("save-schedule").onclick=saveSchedule;
+  $("save-pause").onclick=savePause;
   $("save-intro-text").onclick=saveIntroText;
   $("save-date-notes").onclick=saveDateNotes;
   $("show-heatmap").onclick=()=>setView("heatmap");$("show-records").onclick=()=>setView("records");$("show-schedule").onclick=()=>setView("schedule");

@@ -113,3 +113,21 @@
 .intro-text-actions button{flex:0 0 auto;border:0;border-radius:9px;padding:11px 16px;color:#fff;background:var(--green);font-weight:750;cursor:pointer}
 .intro-text-actions button:disabled{opacity:.55}
 @media(max-width:620px){.date{min-width:0;padding-right:0}.intro-text-actions{align-items:stretch;flex-direction:column}.intro-text-actions button{width:100%}}
+
+.pause-notice{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:14px 18px;border:1px solid #edc5a8;border-radius:13px;color:#7a4526;background:#fff7f0;box-shadow:0 8px 22px #7a45260c}
+.pause-notice b{flex:0 0 auto;padding:5px 9px;border-radius:7px;color:#fff;background:#c66d36;font-size:.76rem}
+.pause-notice span{font-size:.86rem;line-height:1.55}
+.pause-editor{margin-bottom:20px;padding:17px;border:1px solid #d9e3df;border-radius:12px;background:#f8fbfa}
+.pause-editor-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
+.pause-editor-heading h3{margin:0;font-size:.98rem}
+.pause-editor-heading p{margin:5px 0 0;color:#727e79;font-size:.76rem;line-height:1.55}
+.pause-editor-heading>span{flex:0 0 auto;padding:5px 9px;border-radius:99px;color:#176e55;background:#dff1ea;font-size:.72rem;font-weight:800}
+.pause-editor-heading>span.paused{color:#a45128;background:#f8e4d7}
+.pause-toggle{display:flex;align-items:center;gap:9px;margin-bottom:13px;color:#34443f;font-size:.86rem}
+.pause-toggle input{width:18px;height:18px;margin:0;accent-color:#c66d36}
+.pause-editor>label:not(.pause-toggle){display:block}
+.pause-editor-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:13px}
+.pause-editor-actions p{margin:0;color:#727e79;font-size:.75rem}
+.pause-editor-actions button{flex:0 0 auto;border:0;border-radius:9px;padding:11px 16px;color:#fff;background:var(--green);font-weight:750;cursor:pointer}
+.pause-editor-actions button:disabled{opacity:.55}
+@media(max-width:620px){.pause-notice{align-items:flex-start}.pause-editor-actions{align-items:stretch;flex-direction:column}.pause-editor-actions button{width:100%}}
