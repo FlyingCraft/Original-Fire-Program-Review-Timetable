@@ -16,7 +16,7 @@
         button.disabled=true;
         button.classList.remove("selected");
         button.classList.add("unavailable");
-        button.textContent="×";
+        if(button.textContent!=="×")button.textContent="×";
         button.title="该时段不可用";
       }
     });
@@ -31,7 +31,7 @@
           if(blocked(slot.slice(0,10),slot.slice(11))&&halves[index]){
             halves[index].classList.remove("selected");
             halves[index].classList.add("unavailable");
-            halves[index].textContent="×";
+            if(halves[index].textContent!=="×")halves[index].textContent="×";
           }
         });
       }
