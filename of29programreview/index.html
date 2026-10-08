@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>节目审核 · 到场统计</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=14">
+  <link rel="stylesheet" href="../assets/styles.css?v=15">
   <link rel="stylesheet" href="../assets/unavailable.css?v=1">
 </head>
 <body data-page="stats">
@@ -30,6 +30,11 @@
         <label>每天结束时间<input id="schedule-end-time" type="time" step="1800"></label>
       </div>
       <div class="schedule-help"><p>时间需对齐到整点或半点；日期范围最多 31 天。修改设置不会删除旧提交，但旧日期不会出现在新的热力表中。</p><button id="save-schedule">保存时间设置</button></div>
+      <section class="intro-text-editor">
+        <div><h3>填写页说明文字</h3><p>这行文字会显示在填写页标题说明的最下方。</p></div>
+        <label>自定义说明<input id="schedule-intro-text" maxlength="120" placeholder="留空时自动显示当前开放天数和时间"></label>
+        <div class="intro-text-actions"><p>最多 120 个字；留空保存可恢复自动生成。</p><button id="save-intro-text" type="button">保存填写页说明</button></div>
+      </section>
       <section class="date-notes-editor">
         <div class="date-notes-heading"><div><h3>日期备注</h3><p>备注会显示在填写页和热力统计的日期标题下一行。</p></div></div>
         <div id="date-notes-fields" class="date-notes-fields"></div>
@@ -39,7 +44,7 @@
     <aside id="roster" class="roster hidden"><div class="empty"><b>▦</b><h2>选择一个时段</h2><p>点击热力表中的数字查看对应人员。</p></div></aside>
   </main>
   <div id="toast" class="toast hidden"></div>
-  <script src="../assets/app.js?v=15"></script>
+  <script src="../assets/app.js?v=16"></script>
   <script src="../assets/unavailable.js?v=3"></script>
 </body>
 </html>

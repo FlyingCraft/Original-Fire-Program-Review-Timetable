@@ -82,7 +82,8 @@ function updateFormIntro(){
   $("schedule-month").textContent=sy===ey&&sm===em?months[sm-1]:"DATE";
   $("schedule-range").textContent=sy===ey&&sm===em?sd+"—"+ed:sm+"/"+sd+"—"+em+"/"+ed;
   $("schedule-year").textContent=sy===ey?String(sy):sy+"—"+ey;
-  const detail=$("schedule-detail");if(detail)detail.textContent="当前开放 "+DAYS.length+" 天，每天 "+SCHEDULE.start_time+"—"+SCHEDULE.end_time+"。";
+  const automaticDetail="当前开放 "+DAYS.length+" 天，每天 "+SCHEDULE.start_time+"—"+SCHEDULE.end_time+"。";
+  const detail=$("schedule-detail");if(detail)detail.textContent=String(SCHEDULE.intro_text||"").trim()||automaticDetail;
 }
 
 if(document.body.dataset.page==="form"){
@@ -167,7 +168,18 @@ if(document.body.dataset.page==="stats"){
     $("schedule-start-date").value=SCHEDULE.start_date;$("schedule-end-date").value=SCHEDULE.end_date;
     $("schedule-start-time").value=SCHEDULE.start_time;$("schedule-end-time").value=SCHEDULE.end_time;
     $("schedule-current").textContent=scheduleSummary();
+    $("schedule-intro-text").value=String(SCHEDULE.intro_text||"");
+    $("schedule-intro-text").placeholder="当前开放 "+DAYS.length+" 天，每天 "+SCHEDULE.start_time+"—"+SCHEDULE.end_time+"。";
     renderDateNotesEditor();
+  }
+  async function saveIntroText(){
+    const value=$("schedule-intro-text").value.trim(),button=$("save-intro-text");
+    button.disabled=true;button.textContent="正在保存…";
+    try{
+      await rpc("update_program_review_intro_text",{p_admin_key:adminKey(),p_intro_text:value});
+      await loadData();toast(value?"填写页说明已更新":"已恢复自动生成说明");
+    }catch(error){toast(String(error.message||"").includes("too long")?"填写页说明最多 120 个字":"填写页说明保存失败")}
+    finally{button.disabled=false;button.textContent="保存填写页说明"}
   }
   function renderDateNotesEditor(){
     const root=$("date-notes-fields");if(!root||!SCHEDULE)return;
@@ -241,6 +253,7 @@ if(document.body.dataset.page==="stats"){
   $("refresh").onclick=()=>loadData().catch(()=>toast("刷新失败"));
   $("records-refresh").onclick=()=>loadData().catch(()=>toast("刷新失败"));
   $("save-schedule").onclick=saveSchedule;
+  $("save-intro-text").onclick=saveIntroText;
   $("save-date-notes").onclick=saveDateNotes;
   $("show-heatmap").onclick=()=>setView("heatmap");$("show-records").onclick=()=>setView("records");$("show-schedule").onclick=()=>setView("schedule");
   if(sessionStorage.getItem("of29-admin-key")){$("admin-key").value=sessionStorage.getItem("of29-admin-key");load()}
