@@ -88,22 +88,40 @@ function updateFormIntro(){
 
 if(document.body.dataset.page==="form"){
   const selected=new Set();
+  const draftKey="of29-form-draft-v1",codeKey="of29-form-code";
   let granularity=Number(localStorage.getItem("of29-form-granularity")||30);
-  localStorage.removeItem("of29-response");
-  localStorage.removeItem("of29-slots");
+  function slotAllowed(slot){
+    const date=String(slot).slice(0,10),time=String(slot).slice(11),unavailable=Array.isArray(SCHEDULE?.unavailable)?SCHEDULE.unavailable:[];
+    if(!DAYS.some(day=>day.date===date)||!TIMES.includes(time))return false;
+    return !unavailable.some(rule=>rule?.date===date&&(!rule.start_time||!rule.end_time||(minutes(time)>=minutes(rule.start_time)&&minutes(time)<minutes(rule.end_time))));
+  }
+  function saveDraft(){
+    localStorage.setItem(draftKey,JSON.stringify({internalId:$("name").value,note:$("note").value,slots:[...selected].sort(),savedAt:new Date().toISOString()}));
+    sessionStorage.setItem(codeKey,$("group").value);
+  }
+  function restoreDraft(){
+    let draft={};
+    try{draft=JSON.parse(localStorage.getItem(draftKey)||"{}")||{}}catch{draft={}}
+    $("name").value=String(draft.internalId||"");$("note").value=String(draft.note||"");$("group").value=sessionStorage.getItem(codeKey)||"";
+    selected.clear();
+    (Array.isArray(draft.slots)?draft.slots:[]).filter(slotAllowed).forEach(slot=>selected.add(slot));
+    saveDraft();
+  }
   function renderThirty(){return TIMES.map((time,i)=>'<div class="grid-row"><div class="time-label '+(i%2?"half":"")+'">'+(i%2?"":time)+'</div>'+DAYS.map(day=>{const slot=key(day.date,time);return '<button class="slot '+(selected.has(slot)?"selected":"")+'" data-slot="'+slot+'" aria-label="'+day.label+" "+time+"至"+addMinutes(time)+'">'+(selected.has(slot)?"✓":"")+'</button>'}).join("")+'</div>').join("")}
   function renderHours(){return HOURS.map(time=>{const index=TIMES.indexOf(time),secondTime=TIMES[index+1]||null;return '<div class="grid-row"><div class="time-label hour">'+time+'</div>'+DAYS.map(day=>{const first=key(day.date,time),second=secondTime?key(day.date,secondTime):"",slots=second?[first,second]:[first],finish=secondTime?addMinutes(secondTime):addMinutes(time);return '<button class="hour-slot" data-slots="'+slots.join("|")+'" aria-label="'+day.label+" "+time+"至"+finish+'"><span class="hour-half '+(selected.has(first)?"selected":"")+'">✓</span>'+(second?'<span class="hour-half '+(selected.has(second)?"selected":"")+'">✓</span>':'<span class="hour-half disabled"></span>')+'</button>'}).join("")+'</div>'}).join("")}
   function render(){
     $("picker").innerHTML=headers()+(granularity===30?renderThirty():renderHours())+'<div class="end-label">'+SCHEDULE.end_time+'</div>';
     applyGridColumns($("picker"));
     $("selected-count").textContent="已选 "+durationLabel(selected.size)+"，可在右侧切换选择时段长度";
-    document.querySelectorAll(".slot").forEach(button=>button.onclick=()=>{const slot=button.dataset.slot;selected.has(slot)?selected.delete(slot):selected.add(slot);render()});
-    document.querySelectorAll(".hour-slot").forEach(button=>button.onclick=()=>{const slots=button.dataset.slots.split("|").filter(Boolean),both=slots.every(slot=>selected.has(slot));slots.forEach(slot=>both?selected.delete(slot):selected.add(slot));render()});
+    document.querySelectorAll(".slot").forEach(button=>button.onclick=()=>{const slot=button.dataset.slot;selected.has(slot)?selected.delete(slot):selected.add(slot);saveDraft();render()});
+    document.querySelectorAll(".hour-slot").forEach(button=>button.onclick=()=>{const slots=button.dataset.slots.split("|").filter(Boolean),both=slots.every(slot=>selected.has(slot));slots.forEach(slot=>both?selected.delete(slot):selected.add(slot));saveDraft();render()});
   }
   bindSwitch("form-granularity",granularity,next=>{granularity=next;localStorage.setItem("of29-form-granularity",next);render()});
+  [$("name"),$("note")].forEach(input=>input.addEventListener("input",saveDraft));
+  $("group").addEventListener("input",saveDraft);
   $("edit-again").onclick=()=>$("success").classList.add("hidden");
   $("submit").disabled=true;
-  loadSchedule().then(()=>{updateFormIntro();render();$("submit").disabled=false}).catch(error=>{
+  loadSchedule().then(()=>{restoreDraft();updateFormIntro();render();$("submit").disabled=false}).catch(error=>{
     toast("时间设置读取失败，请刷新页面");
     $("schedule-range").textContent="读取失败";$("schedule-year").textContent="—";
     $("schedule-detail").textContent=String(error.message||"").includes("超时")?"连接数据库超时，请检查网络后刷新页面。":"暂时无法读取当前开放时间。";
@@ -117,6 +135,7 @@ if(document.body.dataset.page==="form"){
     $("submit").disabled=true;$("submit").textContent="正在保存…";
     try{
       await rpc("submit_program_review",{p_id:null,p_edit_token:null,p_name:internalId,p_group_name:modificationCode,p_note:$("note").value.trim(),p_slots:[...selected].sort()});
+      saveDraft();
       $("success").classList.remove("hidden");window.scrollTo({top:0,behavior:"smooth"});
     }catch(error){
       const message=String(error.message||"");
