@@ -1,10 +1,21 @@
 const SUPABASE_URL="https://czydcsdgoiwivwpnggiq.supabase.co";
 const SUPABASE_KEY="sb_publishable_YYkORrCLJzGuWOaAqLX0uQ_VimButZj";
-let SCHEDULE=null,DAYS=[],TIMES=[],HOURS=[];
+let SCHEDULE=null,ALL_DAYS=[],DAYS=[],TIMES=[],HOURS=[];
 const key=(date,time)=>date+"T"+time;
 const $=id=>document.getElementById(id);
 function toast(message){$("toast").textContent=message;$("toast").classList.remove("hidden");setTimeout(()=>$("toast").classList.add("hidden"),2600)}
-async function rpc(name,body={}){const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+name,{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},body:JSON.stringify(body)});const data=await response.json().catch(()=>null);if(!response.ok)throw new Error(data?.message||"请求失败");return data}
+async function rpc(name,body={}){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+  try{
+    const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+name,{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_KEY},body:JSON.stringify(body),signal:controller.signal});
+    const data=await response.json().catch(()=>null);
+    if(!response.ok)throw new Error(data?.message||"请求失败");
+    return data;
+  }catch(error){
+    if(error?.name==="AbortError")throw new Error("请求超时");
+    throw error;
+  }finally{clearTimeout(timer)}
+}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function bindSwitch(id,current,onChange){const root=$(id);root.querySelectorAll("button").forEach(button=>{button.classList.toggle("active",Number(button.dataset.minutes)===current);button.onclick=()=>{const next=Number(button.dataset.minutes);root.querySelectorAll("button").forEach(item=>item.classList.toggle("active",item===button));onChange(next)}})}
 function durationLabel(slotCount){const hours=slotCount/2;return Number.isInteger(hours)?hours+" 小时":hours.toFixed(1)+" 小时"}
@@ -15,10 +26,10 @@ function isoDate(date){return date.toISOString().slice(0,10)}
 function addDays(value,amount){const [y,m,d]=value.split("-").map(Number),date=new Date(Date.UTC(y,m-1,d));date.setUTCDate(date.getUTCDate()+amount);return isoDate(date)}
 function buildSchedule(config){
   SCHEDULE=config;
-  DAYS=[];
+  ALL_DAYS=[];
   for(let date=config.start_date;date<=config.end_date;date=addDays(date,1)){
     const [y,m,d]=date.split("-").map(Number),weekday=["周日","周一","周二","周三","周四","周五","周六"][new Date(Date.UTC(y,m-1,d)).getUTCDay()];
-    DAYS.push({date,weekday,label:m+"月"+d+"日"});
+    ALL_DAYS.push({date,weekday,label:m+"月"+d+"日"});
   }
   TIMES=[];
   for(let value=minutes(config.start_time);value<minutes(config.end_time);value+=30)TIMES.push(timeFromMinutes(value));
@@ -29,16 +40,31 @@ function buildSchedule(config){
     const value=minutes(time);
     return value>=minutes(rule.start_time)&&value<minutes(rule.end_time);
   });
-  DAYS=DAYS.filter(day=>!TIMES.length||!TIMES.every(time=>slotIsBlocked(day.date,time)));
+  DAYS=ALL_DAYS.filter(day=>!TIMES.length||!TIMES.every(time=>slotIsBlocked(day.date,time)));
   HOURS=TIMES.filter((_,index)=>index%2===0);
 }
-async function loadSchedule(){
-  const config=await rpc("get_program_review_config");
-  if(!config||!config.start_date)throw new Error("未读取到时间设置");
-  buildSchedule(config);
-  return config;
+async function loadSchedule(attempt=0){
+  try{
+    const config=await rpc("get_program_review_config");
+    if(!config||!config.start_date)throw new Error("未读取到时间设置");
+    buildSchedule(config);
+    return config;
+  }catch(error){
+    if(attempt<1){
+      const detail=$("schedule-detail");if(detail)detail.textContent="首次读取较慢，正在自动重试…";
+      await new Promise(resolve=>setTimeout(resolve,700));
+      return loadSchedule(attempt+1);
+    }
+    throw error;
+  }
 }
-function headers(){return '<div class="corner">时间</div>'+DAYS.map(d=>'<div class="date-head"><span>'+d.weekday+'</span><strong>'+d.label+'</strong></div>').join("")}
+function headers(){
+  const notes=SCHEDULE&&SCHEDULE.date_notes&&typeof SCHEDULE.date_notes==="object"?SCHEDULE.date_notes:{};
+  return '<div class="corner">时间</div>'+DAYS.map(d=>{
+    const note=String(notes[d.date]||"").trim();
+    return '<div class="date-head"><div class="date-head-main"><span>'+d.weekday+'</span><strong>'+d.label+'</strong></div><small class="date-note '+(note?"":"empty")+'"'+(note?' title="'+escapeHtml(note)+'"':"")+'>'+(note?escapeHtml(note):"无备注")+'</small></div>';
+  }).join("");
+}
 function applyGridColumns(element){
   if(!element)return;
   const dayCount=Math.max(DAYS.length,1);
@@ -76,7 +102,12 @@ if(document.body.dataset.page==="form"){
   bindSwitch("form-granularity",granularity,next=>{granularity=next;localStorage.setItem("of29-form-granularity",next);render()});
   $("edit-again").onclick=()=>$("success").classList.add("hidden");
   $("submit").disabled=true;
-  loadSchedule().then(()=>{updateFormIntro();render();$("submit").disabled=false}).catch(()=>{toast("时间设置读取失败，请刷新页面");$("picker").innerHTML='<div class="schedule-load-error">暂时无法读取可选时间。</div>'});
+  loadSchedule().then(()=>{updateFormIntro();render();$("submit").disabled=false}).catch(error=>{
+    toast("时间设置读取失败，请刷新页面");
+    $("schedule-range").textContent="读取失败";$("schedule-year").textContent="—";
+    $("schedule-detail").textContent=String(error.message||"").includes("超时")?"连接数据库超时，请检查网络后刷新页面。":"暂时无法读取当前开放时间。";
+    $("picker").innerHTML='<div class="schedule-load-error">暂时无法读取可选时间，请刷新页面重试。</div>';
+  });
   $("submit").onclick=async()=>{
     const internalId=$("name").value.trim(),modificationCode=$("group").value;
     if(!internalId)return toast("请先填写社内 ID");
@@ -136,6 +167,23 @@ if(document.body.dataset.page==="stats"){
     $("schedule-start-date").value=SCHEDULE.start_date;$("schedule-end-date").value=SCHEDULE.end_date;
     $("schedule-start-time").value=SCHEDULE.start_time;$("schedule-end-time").value=SCHEDULE.end_time;
     $("schedule-current").textContent=scheduleSummary();
+    renderDateNotesEditor();
+  }
+  function renderDateNotesEditor(){
+    const root=$("date-notes-fields");if(!root||!SCHEDULE)return;
+    const notes=SCHEDULE.date_notes&&typeof SCHEDULE.date_notes==="object"?SCHEDULE.date_notes:{};
+    if(!DAYS.length){root.innerHTML='<div class="date-notes-empty">当前没有可显示的日期</div>';return}
+    root.innerHTML=DAYS.map(day=>'<label><span>'+day.weekday+' '+day.label+'</span><input data-date-note="'+day.date+'" maxlength="60" value="'+escapeHtml(notes[day.date]||"")+'" placeholder="例如：下午场、终审日"></label>').join("");
+  }
+  async function saveDateNotes(){
+    const notes={};
+    document.querySelectorAll("[data-date-note]").forEach(input=>{const value=input.value.trim();if(value)notes[input.dataset.dateNote]=value});
+    const button=$("save-date-notes");button.disabled=true;button.textContent="正在保存…";
+    try{
+      await rpc("update_program_review_date_notes",{p_admin_key:adminKey(),p_date_notes:notes});
+      await loadData();toast("日期备注已更新");
+    }catch(error){toast(String(error.message||"").includes("too long")?"单条备注最多 60 个字":"日期备注保存失败")}
+    finally{button.disabled=false;button.textContent="保存日期备注"}
   }
   async function saveSchedule(){
     const startDate=$("schedule-start-date").value,endDate=$("schedule-end-date").value,startTime=$("schedule-start-time").value,endTime=$("schedule-end-time").value;
@@ -193,6 +241,7 @@ if(document.body.dataset.page==="stats"){
   $("refresh").onclick=()=>loadData().catch(()=>toast("刷新失败"));
   $("records-refresh").onclick=()=>loadData().catch(()=>toast("刷新失败"));
   $("save-schedule").onclick=saveSchedule;
+  $("save-date-notes").onclick=saveDateNotes;
   $("show-heatmap").onclick=()=>setView("heatmap");$("show-records").onclick=()=>setView("records");$("show-schedule").onclick=()=>setView("schedule");
   if(sessionStorage.getItem("of29-admin-key")){$("admin-key").value=sessionStorage.getItem("of29-admin-key");load()}
 }
