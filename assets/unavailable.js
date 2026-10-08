@@ -62,7 +62,7 @@
   const editor=document.createElement("section");
   editor.className="unavailable-editor";
   editor.innerHTML=
-    '<div class="unavailable-heading"><div><h3>不可使用时间</h3><p>可添加整天禁用，或同一天添加多个禁用时段。</p></div><span id="unavailable-count">0 条</span></div>'+
+    '<div class="unavailable-heading"><div><h3>不可使用时间</h3><p>全天禁用会隐藏该日期列；也可为同一天添加多个禁用时段。</p></div><span id="unavailable-count">0 条</span></div>'+
     '<div class="unavailable-builder">'+
       '<label>日期<input id="blocked-date" type="date"></label>'+
       '<label class="blocked-all-day"><span>禁用方式</span><label class="check-line"><input id="blocked-all-day" type="checkbox">全天不可用</label></label>'+
@@ -71,7 +71,7 @@
       '<button id="add-blocked-rule" type="button">添加禁用规则</button>'+
     '</div>'+
     '<div id="unavailable-rules" class="unavailable-rules"></div>'+
-    '<div class="unavailable-actions"><p>禁用格会在填写页和热力统计中显示为灰色，并且无法提交。</p><button id="save-blocked-rules" type="button">保存不可用时间</button></div>';
+    '<div class="unavailable-actions"><p>全天禁用的日期不会显示；部分禁用时段显示为灰色，并且无法提交。</p><button id="save-blocked-rules" type="button">保存不可用时间</button></div>';
   card.querySelector(".schedule-help").before(editor);
 
   let draft=[],lastConfig="";
