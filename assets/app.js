@@ -31,7 +31,12 @@ async function loadSchedule(){
   return config;
 }
 function headers(){return '<div class="corner">时间</div>'+DAYS.map(d=>'<div class="date-head"><span>'+d.weekday+'</span><strong>'+d.label+'</strong></div>').join("")}
-function applyGridColumns(element){if(element)element.style.setProperty("--day-count",Math.max(DAYS.length,1))}
+function applyGridColumns(element){
+  if(!element)return;
+  const dayCount=Math.max(DAYS.length,1);
+  element.style.setProperty("--day-count",dayCount);
+  element.style.setProperty("--grid-min-width",64+dayCount*112+"px");
+}
 function scheduleSummary(){
   if(!SCHEDULE)return "";
   return SCHEDULE.start_date+" — "+SCHEDULE.end_date+" · 每天 "+SCHEDULE.start_time+"—"+SCHEDULE.end_time;
