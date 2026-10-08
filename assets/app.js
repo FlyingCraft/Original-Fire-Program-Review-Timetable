@@ -62,7 +62,7 @@ function headers(){
   const notes=SCHEDULE&&SCHEDULE.date_notes&&typeof SCHEDULE.date_notes==="object"?SCHEDULE.date_notes:{};
   return '<div class="corner">时间</div>'+DAYS.map(d=>{
     const note=String(notes[d.date]||"").trim();
-    return '<div class="date-head"><div class="date-head-main"><span>'+d.weekday+'</span><strong>'+d.label+'</strong></div><small class="date-note '+(note?"":"empty")+'"'+(note?' title="'+escapeHtml(note)+'"':"")+'>'+(note?escapeHtml(note):"无备注")+'</small></div>';
+    return '<div class="date-head"><div class="date-head-main"><span>'+d.weekday+'</span><strong>'+d.label+'</strong></div><small class="date-note '+(note?"":"is-empty")+'"'+(note?' title="'+escapeHtml(note)+'"':"")+'>'+(note?escapeHtml(note):"无备注")+'</small></div>';
   }).join("");
 }
 function applyGridColumns(element){

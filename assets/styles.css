@@ -83,7 +83,7 @@
 .date-head{flex-direction:column;justify-content:center;gap:4px;min-width:0}
 .date-head-main{display:flex;align-items:center;justify-content:center;gap:5px;max-width:100%;white-space:nowrap}
 .date-note{display:block;max-width:100%;overflow:hidden;color:#73807c;font-size:.66rem;font-weight:650;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
-.date-note.empty{visibility:hidden}
+.date-note.is-empty{visibility:hidden}
 .date-notes-editor{margin-top:22px;padding-top:20px;border-top:1px solid #e2e8e6}
 .date-notes-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
 .date-notes-heading h3{margin:0;font-size:.98rem}
