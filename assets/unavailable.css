@@ -1,0 +1,27 @@
+.slot.unavailable,.hour-slot.unavailable,.hour-half.unavailable,.heat.unavailable,.heat-segment.unavailable{
+  background:#e6e8e8!important;color:#929a97!important;cursor:not-allowed!important
+}
+.slot.unavailable,.heat.unavailable,.heat-segment.unavailable{font-weight:800}
+.hour-slot.unavailable:hover{outline:0}
+.unavailable-editor{margin-top:22px;padding-top:20px;border-top:1px solid #e2e8e6}
+.unavailable-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.unavailable-heading h3{margin:0;font-size:.98rem}
+.unavailable-heading p{margin:5px 0 0;color:#727e79;font-size:.76rem}
+.unavailable-heading>span{padding:5px 9px;border-radius:99px;background:#eef2f1;color:#65716d;font-size:.72rem;font-weight:750}
+.unavailable-builder{display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr auto;align-items:end;gap:10px;margin-top:15px}
+.unavailable-builder>button,.unavailable-actions>button{border:0;border-radius:9px;padding:11px 14px;color:#fff;background:var(--green);font-weight:750;cursor:pointer}
+.blocked-all-day{display:grid;gap:7px}
+.check-line{min-height:43px;display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #d8e0e2;border-radius:9px;background:#fbfcfc}
+.check-line input{width:auto;margin:0}
+.unavailable-rules{display:grid;gap:8px;margin-top:14px}
+.unavailable-empty{padding:17px;border:1px dashed #d9dfdd;border-radius:9px;text-align:center;color:#87908d;font-size:.78rem}
+.unavailable-rule{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #dfe5e3;border-radius:9px;background:#fafcfc}
+.unavailable-rule>div{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.unavailable-rule strong{font-size:.82rem}
+.unavailable-rule span{color:#6f7a76;font-size:.75rem}
+.unavailable-rule button{border:1px solid #e5c8cc;border-radius:7px;padding:6px 9px;color:#ac3443;background:#fff;cursor:pointer}
+.unavailable-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:14px}
+.unavailable-actions p{margin:0;color:#727e79;font-size:.75rem;line-height:1.6}
+.unavailable-actions button:disabled{opacity:.55}
+@media(max-width:900px){.unavailable-builder{grid-template-columns:1fr 1fr}.unavailable-builder>button{grid-column:1/-1}}
+@media(max-width:560px){.unavailable-builder{grid-template-columns:1fr}.unavailable-builder>button{grid-column:auto}.unavailable-actions{align-items:stretch;flex-direction:column}.unavailable-actions>button{width:100%}}
