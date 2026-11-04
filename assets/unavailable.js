@@ -68,19 +68,21 @@
       '<label class="blocked-all-day"><span>禁用方式</span><label class="check-line"><input id="blocked-all-day" type="checkbox">全天不可用</label></label>'+
       '<label>开始时间<input id="blocked-start" type="time" step="1800"></label>'+
       '<label>结束时间<input id="blocked-end" type="time" step="1800"></label>'+
-      '<button id="add-blocked-rule" type="button">添加禁用规则</button>'+
+      '<div class="blocked-builder-actions"><button id="cancel-blocked-edit" class="hidden" type="button">取消编辑</button><button id="add-blocked-rule" type="button">添加禁用规则</button></div>'+
     '</div>'+
     '<div id="unavailable-rules" class="unavailable-rules"></div>'+
     '<div class="unavailable-actions"><p>全天禁用的日期不会显示；部分禁用时段显示为灰色，并且无法提交。</p><button id="save-blocked-rules" type="button">保存不可用时间</button></div>';
   card.querySelector(".schedule-help").before(editor);
 
-  let draft=[],lastConfig="";
+  let draft=[],lastConfig="",editingIndex=null;
   const dateInput=document.getElementById("blocked-date");
   const allDay=document.getElementById("blocked-all-day");
   const startInput=document.getElementById("blocked-start");
   const endInput=document.getElementById("blocked-end");
   const list=document.getElementById("unavailable-rules");
   const count=document.getElementById("unavailable-count");
+  const addButton=document.getElementById("add-blocked-rule");
+  const cancelButton=document.getElementById("cancel-blocked-edit");
 
   function configFingerprint(){
     if(typeof SCHEDULE==="undefined"||!SCHEDULE)return "";
@@ -99,10 +101,14 @@
     if(!draft.length){list.innerHTML='<div class="unavailable-empty">暂无禁用时间</div>';return}
     list.innerHTML=draft.map((rule,index)=>{
       const range=rule.start_time&&rule.end_time?rule.start_time+"—"+rule.end_time:"全天";
-      return '<div class="unavailable-rule"><div><strong>'+labelDate(rule.date)+'</strong><span>'+range+'</span></div><button type="button" data-delete-blocked="'+index+'">删除</button></div>';
+      return '<div class="unavailable-rule"><div><strong>'+labelDate(rule.date)+'</strong><span>'+range+'</span></div><div class="unavailable-rule-actions"><button class="edit" type="button" data-edit-blocked="'+index+'">编辑</button><button type="button" data-delete-blocked="'+index+'">删除</button></div></div>';
     }).join("");
+    list.querySelectorAll("[data-edit-blocked]").forEach(button=>button.addEventListener("click",()=>startEdit(Number(button.dataset.editBlocked))));
     list.querySelectorAll("[data-delete-blocked]").forEach(button=>button.addEventListener("click",()=>{
-      draft.splice(Number(button.dataset.deleteBlocked),1);
+      const index=Number(button.dataset.deleteBlocked);
+      draft.splice(index,1);
+      if(editingIndex===index)resetEditor();
+      else if(editingIndex!==null&&index<editingIndex)editingIndex--;
       renderRules();
     }));
   }
@@ -120,7 +126,7 @@
     if(!next||(!force&&next===lastConfig))return;
     lastConfig=next;
     draft=JSON.parse(JSON.stringify(SCHEDULE.unavailable||[]));
-    syncInputs();renderRules();markUnavailable();
+    resetEditor();renderRules();markUnavailable();
   }
   function toggleAllDay(){
     startInput.disabled=allDay.checked;
@@ -129,7 +135,35 @@
   allDay.addEventListener("change",toggleAllDay);
   toggleAllDay();
 
-  document.getElementById("add-blocked-rule").addEventListener("click",()=>{
+  function resetEditor(){
+    editingIndex=null;
+    addButton.textContent="添加禁用规则";
+    cancelButton.classList.add("hidden");
+    if(typeof SCHEDULE!=="undefined"&&SCHEDULE){
+      dateInput.value=SCHEDULE.start_date;
+      startInput.value=SCHEDULE.start_time;
+      endInput.value=SCHEDULE.end_time;
+    }
+    allDay.checked=false;
+    toggleAllDay();
+    syncInputs();
+  }
+  function startEdit(index){
+    const rule=draft[index];
+    if(!rule)return;
+    editingIndex=index;
+    dateInput.value=rule.date;
+    allDay.checked=!rule.start_time||!rule.end_time;
+    startInput.value=rule.start_time||(SCHEDULE&&SCHEDULE.start_time)||"";
+    endInput.value=rule.end_time||(SCHEDULE&&SCHEDULE.end_time)||"";
+    toggleAllDay();
+    addButton.textContent="保存修改";
+    cancelButton.classList.remove("hidden");
+    editor.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  cancelButton.addEventListener("click",resetEditor);
+
+  addButton.addEventListener("click",()=>{
     if(typeof SCHEDULE==="undefined"||!SCHEDULE)return toast("请先载入时间设置");
     const date=dateInput.value;
     if(!date)return toast("请选择日期");
@@ -143,10 +177,14 @@
       if(mins(start)%30||mins(end)%30)return toast("时间需对齐到整点或半点");
       rule={date,start_time:start,end_time:end};
     }
-    if(draft.some(item=>JSON.stringify(item)===JSON.stringify(rule)))return toast("这条规则已经存在");
-    draft.push(rule);
+    if(draft.some((item,index)=>index!==editingIndex&&JSON.stringify(item)===JSON.stringify(rule)))return toast("这条规则已经存在");
+    const wasEditing=editingIndex!==null;
+    if(wasEditing)draft[editingIndex]=rule;
+    else draft.push(rule);
     draft.sort((a,b)=>a.date.localeCompare(b.date)||(a.start_time||"").localeCompare(b.start_time||""));
+    resetEditor();
     renderRules();
+    toast(wasEditing?"禁用规则已修改，请点击下方保存":"禁用规则已添加，请点击下方保存");
   });
 
   document.getElementById("save-blocked-rules").addEventListener("click",async()=>{

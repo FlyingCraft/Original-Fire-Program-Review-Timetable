@@ -9,7 +9,9 @@
 .unavailable-heading p{margin:5px 0 0;color:#727e79;font-size:.76rem}
 .unavailable-heading>span{padding:5px 9px;border-radius:99px;background:#eef2f1;color:#65716d;font-size:.72rem;font-weight:750}
 .unavailable-builder{display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr auto;align-items:end;gap:10px;margin-top:15px}
-.unavailable-builder>button,.unavailable-actions>button{border:0;border-radius:9px;padding:11px 14px;color:#fff;background:var(--green);font-weight:750;cursor:pointer}
+.blocked-builder-actions{display:flex;gap:8px}
+.blocked-builder-actions button,.unavailable-actions>button{border:0;border-radius:9px;padding:11px 14px;color:#fff;background:var(--green);font-weight:750;cursor:pointer;white-space:nowrap}
+.blocked-builder-actions #cancel-blocked-edit{border:1px solid #ccd6d3;color:#64716d;background:#fff}
 .blocked-all-day{display:grid;gap:7px}
 .check-line{min-height:43px;display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #d8e0e2;border-radius:9px;background:#fbfcfc}
 .check-line input{width:auto;margin:0}
@@ -20,8 +22,10 @@
 .unavailable-rule strong{font-size:.82rem}
 .unavailable-rule span{color:#6f7a76;font-size:.75rem}
 .unavailable-rule button{border:1px solid #e5c8cc;border-radius:7px;padding:6px 9px;color:#ac3443;background:#fff;cursor:pointer}
+.unavailable-rule .unavailable-rule-actions{flex-wrap:nowrap}
+.unavailable-rule button.edit{border-color:#bcd6cf;color:#16705e}
 .unavailable-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:14px}
 .unavailable-actions p{margin:0;color:#727e79;font-size:.75rem;line-height:1.6}
 .unavailable-actions button:disabled{opacity:.55}
-@media(max-width:900px){.unavailable-builder{grid-template-columns:1fr 1fr}.unavailable-builder>button{grid-column:1/-1}}
-@media(max-width:560px){.unavailable-builder{grid-template-columns:1fr}.unavailable-builder>button{grid-column:auto}.unavailable-actions{align-items:stretch;flex-direction:column}.unavailable-actions>button{width:100%}}
+@media(max-width:900px){.unavailable-builder{grid-template-columns:1fr 1fr}.blocked-builder-actions{grid-column:1/-1}.blocked-builder-actions button{flex:1}}
+@media(max-width:560px){.unavailable-builder{grid-template-columns:1fr}.blocked-builder-actions{grid-column:auto}.unavailable-actions{align-items:stretch;flex-direction:column}.unavailable-actions>button{width:100%}}
