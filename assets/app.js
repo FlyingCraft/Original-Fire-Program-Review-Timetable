@@ -136,7 +136,7 @@ if(document.body.dataset.page==="form"){
   $("submit").onclick=async()=>{
     if(SCHEDULE?.is_paused)return toast("问卷已暂停，当前无法提交");
     const internalId=$("name").value.trim(),modificationCode=$("group").value;
-    if(!internalId)return toast("请先填写社内 ID");
+    if(!internalId)return toast("请先填写社内称呼");
     if(modificationCode.length<4)return toast("修改码至少需要 4 位");
     if(!selected.size)return toast("请至少选择一个时段");
     $("submit").disabled=true;$("submit").textContent="正在保存…";
@@ -146,7 +146,7 @@ if(document.body.dataset.page==="form"){
       $("success").classList.remove("hidden");window.scrollTo({top:0,behavior:"smooth"});
     }catch(error){
       const message=String(error.message||"");
-      toast(message.includes("questionnaire paused")?"问卷已暂停，当前无法提交":message.includes("modification code")?"社内 ID 或修改码不正确":message.includes("slot")?"所选时间已不在当前开放范围，请刷新页面后重选":"保存失败，请稍后重试");
+      toast(message.includes("questionnaire paused")?"问卷已暂停，当前无法提交":message.includes("modification code")?"社内称呼或修改码不正确":message.includes("slot")?"所选时间已不在当前开放范围，请刷新页面后重选":"保存失败，请稍后重试");
     }finally{applyPauseState()}
   };
 }
@@ -171,9 +171,9 @@ if(document.body.dataset.page==="stats"){
     const chosen=person();
     if(chosen){
       const note=chosen.note?'<div class="person-note">'+escapeHtml(chosen.note)+'</div>':"";
-      if(!active){$("roster").innerHTML='<small>社内 ID</small><h2>'+escapeHtml(chosen.name)+'</h2><div class="roster-count"><b>'+durationLabel(chosen.slots.length)+'</b><span>共可到场</span></div>'+note;return}
+      if(!active){$("roster").innerHTML='<small>社内称呼</small><h2>'+escapeHtml(chosen.name)+'</h2><div class="roster-count"><b>'+durationLabel(chosen.slots.length)+'</b><span>共可到场</span></div>'+note;return}
       const day=DAYS.find(item=>active.startsWith(item.date)),time=active.slice(11),available=chosen.slots.includes(active);
-      $("roster").innerHTML='<small>社内 ID</small><h2>'+escapeHtml(chosen.name)+'</h2><h3>'+(day?day.label:active.slice(0,10))+" "+time+"—"+addMinutes(time)+'</h3><div class="roster-count status"><b>'+(available?"可以到场":"无法到场")+'</b></div>'+note;return
+      $("roster").innerHTML='<small>社内称呼</small><h2>'+escapeHtml(chosen.name)+'</h2><h3>'+(day?day.label:active.slice(0,10))+" "+time+"—"+addMinutes(time)+'</h3><div class="roster-count status"><b>'+(available?"可以到场":"无法到场")+'</b></div>'+note;return
     }
     if(!active){$("roster").innerHTML='<div class="empty"><b>▦</b><h2>选择一个时段</h2><p>点击热力表中的数字查看对应人员。</p></div>';return}
     const people=rows.filter(p=>p.slots.includes(active)),day=DAYS.find(d=>active.startsWith(d.date)),time=active.slice(11);
@@ -186,7 +186,7 @@ if(document.body.dataset.page==="stats"){
     $("records-count").textContent=records.length+" 条";
     $("delete-all-records").disabled=!records.length;
     if(!records.length){$("records-list").innerHTML='<div class="records-empty">目前没有提交记录</div>';return}
-    $("records-list").innerHTML=records.map(record=>{const code=record.modification_code||"";return '<article class="record-card" data-record-id="'+record.id+'"><div class="record-top"><div><small>社内 ID</small><strong>'+escapeHtml(record.internal_id)+'</strong></div><span class="code-badge '+(code?"":"unset")+'">'+(code?"修改码："+escapeHtml(code):"旧记录未保存明文")+'</span></div><div class="record-meta"><span>首次提交：'+formatDate(record.created_at)+'</span><span>最后更新：'+formatDate(record.updated_at)+'</span><span>'+record.slots.length+" 个半小时 · "+durationLabel(record.slots.length)+'</span></div><div class="record-slots">'+record.slots.map(slot=>'<span>'+slotLabel(slot)+'</span>').join("")+'</div>'+(record.note?'<div class="record-note">'+escapeHtml(record.note)+'</div>':"")+'<div class="record-editor"><label>社内 ID<input class="record-id-input" maxlength="30" value="'+escapeHtml(record.internal_id)+'"></label><label>修改码<input class="record-code-input" type="text" minlength="4" maxlength="50" value="'+escapeHtml(code)+'" placeholder="输入新修改码"></label><div class="record-actions"><button data-save-record="'+record.id+'">保存修改</button><button class="danger" data-delete-record="'+record.id+'">删除</button></div></div></article>'}).join("");
+    $("records-list").innerHTML=records.map(record=>{const code=record.modification_code||"";return '<article class="record-card" data-record-id="'+record.id+'"><div class="record-top"><div><small>社内称呼</small><strong>'+escapeHtml(record.internal_id)+'</strong></div><span class="code-badge '+(code?"":"unset")+'">'+(code?"修改码："+escapeHtml(code):"旧记录未保存明文")+'</span></div><div class="record-meta"><span>首次提交：'+formatDate(record.created_at)+'</span><span>最后更新：'+formatDate(record.updated_at)+'</span><span>'+record.slots.length+" 个半小时 · "+durationLabel(record.slots.length)+'</span></div><div class="record-slots">'+record.slots.map(slot=>'<span>'+slotLabel(slot)+'</span>').join("")+'</div>'+(record.note?'<div class="record-note">'+escapeHtml(record.note)+'</div>':"")+'<div class="record-editor"><label>社内称呼<input class="record-id-input" maxlength="30" value="'+escapeHtml(record.internal_id)+'"></label><label>修改码<input class="record-code-input" type="text" minlength="4" maxlength="50" value="'+escapeHtml(code)+'" placeholder="输入新修改码"></label><div class="record-actions"><button data-save-record="'+record.id+'">保存修改</button><button class="danger" data-delete-record="'+record.id+'">删除</button></div></div></article>'}).join("");
     document.querySelectorAll("[data-save-record]").forEach(button=>button.onclick=()=>saveRecord(button.dataset.saveRecord));
     document.querySelectorAll("[data-delete-record]").forEach(button=>button.onclick=()=>deleteRecord(button.dataset.deleteRecord));
   }
@@ -254,10 +254,10 @@ if(document.body.dataset.page==="stats"){
   }
   async function saveRecord(id){
     const card=document.querySelector('[data-record-id="'+id+'"]'),internalId=card.querySelector(".record-id-input").value.trim(),newCode=card.querySelector(".record-code-input").value;
-    if(!internalId)return toast("社内 ID 不能为空");
+    if(!internalId)return toast("社内称呼不能为空");
     if(newCode&&newCode.length<4)return toast("新修改码至少需要 4 位");
     try{buttonBusy(card,true);await rpc("update_program_review_admin_record",{p_admin_key:adminKey(),p_id:id,p_internal_id:internalId,p_new_modification_code:newCode||null});toast("记录已更新");await loadData()}
-    catch(error){const message=String(error.message||"");toast(message.includes("already exists")?"该社内 ID 已存在":"修改失败，请稍后重试")}
+    catch(error){const message=String(error.message||"");toast(message.includes("already exists")?"该社内称呼已存在":"修改失败，请稍后重试")}
     finally{buttonBusy(card,false)}
   }
   async function deleteRecord(id){
