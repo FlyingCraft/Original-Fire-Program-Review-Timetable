@@ -9,7 +9,10 @@
 .records-title{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
 .records-title h2{margin:0;font-size:1.08rem}
 .records-title p{margin:5px 0 0;color:#6d7785;font-size:.8rem}
-.records-title>div:last-child{display:flex;align-items:center;gap:10px;color:#65736e;font-size:.78rem}
+.records-title>div:last-child{display:flex;align-items:center;flex-wrap:wrap;gap:10px;color:#65736e;font-size:.78rem}
+.danger-button{border:1px solid #e4b7bd;border-radius:8px;padding:8px 11px;color:#a92e3f;background:#fff4f5;font-weight:750;cursor:pointer}
+.danger-button:hover{border-color:#cf7f89;background:#fde9ec}
+.danger-button:disabled{cursor:not-allowed;opacity:.5}
 .records-list{display:grid;gap:12px}
 .record-card{padding:16px;border:1px solid #dfe7e4;border-radius:12px;background:#fbfdfc}
 .record-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}

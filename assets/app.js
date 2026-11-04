@@ -184,6 +184,7 @@ if(document.body.dataset.page==="stats"){
   function slotLabel(slot){const day=DAYS.find(item=>slot.startsWith(item.date));return (day?day.label:slot.slice(5,10))+" "+slot.slice(11)}
   function renderRecords(){
     $("records-count").textContent=records.length+" 条";
+    $("delete-all-records").disabled=!records.length;
     if(!records.length){$("records-list").innerHTML='<div class="records-empty">目前没有提交记录</div>';return}
     $("records-list").innerHTML=records.map(record=>{const code=record.modification_code||"";return '<article class="record-card" data-record-id="'+record.id+'"><div class="record-top"><div><small>社内 ID</small><strong>'+escapeHtml(record.internal_id)+'</strong></div><span class="code-badge '+(code?"":"unset")+'">'+(code?"修改码："+escapeHtml(code):"旧记录未保存明文")+'</span></div><div class="record-meta"><span>首次提交：'+formatDate(record.created_at)+'</span><span>最后更新：'+formatDate(record.updated_at)+'</span><span>'+record.slots.length+" 个半小时 · "+durationLabel(record.slots.length)+'</span></div><div class="record-slots">'+record.slots.map(slot=>'<span>'+slotLabel(slot)+'</span>').join("")+'</div>'+(record.note?'<div class="record-note">'+escapeHtml(record.note)+'</div>':"")+'<div class="record-editor"><label>社内 ID<input class="record-id-input" maxlength="30" value="'+escapeHtml(record.internal_id)+'"></label><label>修改码<input class="record-code-input" type="text" minlength="4" maxlength="50" value="'+escapeHtml(code)+'" placeholder="输入新修改码"></label><div class="record-actions"><button data-save-record="'+record.id+'">保存修改</button><button class="danger" data-delete-record="'+record.id+'">删除</button></div></div></article>'}).join("");
     document.querySelectorAll("[data-save-record]").forEach(button=>button.onclick=()=>saveRecord(button.dataset.saveRecord));
@@ -264,6 +265,18 @@ if(document.body.dataset.page==="stats"){
     try{await rpc("delete_program_review_admin_record",{p_admin_key:adminKey(),p_id:id});toast("记录已删除");await loadData()}
     catch{toast("删除失败，请稍后重试")}
   }
+  async function deleteAllRecords(){
+    const count=records.length,button=$("delete-all-records");
+    if(!count)return toast("目前没有可删除的记录");
+    if(!window.confirm("将永久删除当前全部 "+count+" 条提交记录，且无法恢复。确定继续吗？"))return;
+    if(window.prompt("请输入“删除全部”以确认操作：")!=="删除全部")return toast("确认文字不正确，已取消删除");
+    button.disabled=true;button.textContent="正在删除…";
+    try{
+      const deleted=await rpc("delete_all_program_review_admin_records",{p_admin_key:adminKey(),p_confirmation:"DELETE ALL"});
+      await loadData();toast("已删除 "+deleted+" 条记录");
+    }catch{toast("批量删除失败，请稍后重试")}
+    finally{button.disabled=!records.length;button.textContent="删除所有已有记录"}
+  }
   function buttonBusy(card,busy){card.querySelectorAll("button,input").forEach(item=>item.disabled=busy)}
   function setView(view){
     currentView=view;
@@ -291,6 +304,7 @@ if(document.body.dataset.page==="stats"){
   $("load-stats").onclick=load;$("admin-key").onkeydown=e=>{if(e.key==="Enter")load()};
   $("refresh").onclick=()=>loadData().catch(()=>toast("刷新失败"));
   $("records-refresh").onclick=()=>loadData().catch(()=>toast("刷新失败"));
+  $("delete-all-records").onclick=deleteAllRecords;
   $("save-schedule").onclick=saveSchedule;
   $("save-pause").onclick=savePause;
   $("save-intro-text").onclick=saveIntroText;
