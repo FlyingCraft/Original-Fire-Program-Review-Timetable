@@ -1,6 +1,6 @@
 const SUPABASE_URL="https://czydcsdgoiwivwpnggiq.supabase.co";
 const SUPABASE_KEY="sb_publishable_YYkORrCLJzGuWOaAqLX0uQ_VimButZj";
-let SCHEDULE=null,ALL_DAYS=[],DAYS=[],TIMES=[],HOURS=[];
+let SCHEDULE=null,ALL_DAYS=[],BASE_DAYS=[],DAYS=[],TIMES=[],HOURS=[];
 const key=(date,time)=>date+"T"+time;
 const $=id=>document.getElementById(id);
 function toast(message){$("toast").textContent=message;$("toast").classList.remove("hidden");setTimeout(()=>$("toast").classList.add("hidden"),2600)}
@@ -24,6 +24,12 @@ function timeFromMinutes(value){return String(Math.floor(value/60)).padStart(2,"
 function addMinutes(time,amount=30){return timeFromMinutes(minutes(time)+amount)}
 function isoDate(date){return date.toISOString().slice(0,10)}
 function addDays(value,amount){const [y,m,d]=value.split("-").map(Number),date=new Date(Date.UTC(y,m-1,d));date.setUTCDate(date.getUTCDate()+amount);return isoDate(date)}
+function programCategories(){return Array.isArray(SCHEDULE?.categories)?SCHEDULE.categories.filter(item=>item&&item.id&&item.name&&Array.isArray(item.dates)):[]}
+function programCategory(id){return programCategories().find(item=>item.id===id)||null}
+function useCategoryDays(id=""){
+  const category=programCategory(id);
+  DAYS=category?BASE_DAYS.filter(day=>category.dates.includes(day.date)):[...BASE_DAYS];
+}
 function buildSchedule(config){
   SCHEDULE=config;
   ALL_DAYS=[];
@@ -40,7 +46,8 @@ function buildSchedule(config){
     const value=minutes(time);
     return value>=minutes(rule.start_time)&&value<minutes(rule.end_time);
   });
-  DAYS=ALL_DAYS.filter(day=>!TIMES.length||!TIMES.every(time=>slotIsBlocked(day.date,time)));
+  BASE_DAYS=ALL_DAYS.filter(day=>!TIMES.length||!TIMES.every(time=>slotIsBlocked(day.date,time)));
+  DAYS=[...BASE_DAYS];
   HOURS=TIMES.filter((_,index)=>index%2===0);
 }
 async function loadSchedule(attempt=0){
@@ -82,27 +89,47 @@ function updateFormIntro(){
   $("schedule-month").textContent=sy===ey&&sm===em?months[sm-1]:"DATE";
   $("schedule-range").textContent=sy===ey&&sm===em?sd+"—"+ed:sm+"/"+sd+"—"+em+"/"+ed;
   $("schedule-year").textContent=sy===ey?String(sy):sy+"—"+ey;
-  const automaticDetail="当前开放 "+DAYS.length+" 天，每天 "+SCHEDULE.start_time+"—"+SCHEDULE.end_time+"。";
+  const automaticDetail="当前类别开放 "+DAYS.length+" 天，每天 "+SCHEDULE.start_time+"—"+SCHEDULE.end_time+"。";
   const detail=$("schedule-detail");if(detail)detail.textContent=String(SCHEDULE.intro_text||"").trim()||automaticDetail;
 }
 
 if(document.body.dataset.page==="form"){
   const selected=new Set();
-  const draftKey="of29-form-draft-v1",codeKey="of29-form-code";
+  const identityKey="of29-form-identity-v2",codeKey="of29-form-code";
+  let activeCategory=null;
   let granularity=Number(localStorage.getItem("of29-form-granularity")||30);
+  const draftKey=()=>"of29-form-draft-v2-"+(activeCategory?.id||"unknown");
+  function renderCategorySelector(){
+    const root=$("category-selector"),items=programCategories();
+    root.classList.remove("hidden");
+    $("current-category-name").textContent=activeCategory?.name||"未选择类别";
+    $("current-category-name").style.setProperty("--category-color",activeCategory?.color||"#176e55");
+    $("current-category-days").textContent=activeCategory?"可填写 "+DAYS.map(day=>day.label).join("、"):"";
+    $("category-options").innerHTML=items.map(item=>'<button type="button" class="'+(item.id===activeCategory?.id?"active":"")+'" data-category="'+escapeHtml(item.id)+'" style="--category-color:'+escapeHtml(item.color||"#176e55")+'">'+escapeHtml(item.name)+'</button>').join("");
+    $("category-options").querySelectorAll("[data-category]").forEach(button=>button.onclick=()=>activateCategory(button.dataset.category,true));
+  }
+  function activateCategory(id,updateUrl=false){
+    const next=programCategory(id)||programCategories()[0];
+    if(!next)return toast("管理员尚未设置节目类别");
+    if(activeCategory)saveDraft();
+    activeCategory=next;useCategoryDays(next.id);
+    if(updateUrl){const url=new URL(location.href);url.searchParams.set("category",next.id);history.replaceState(null,"",url)}
+    restoreDraft();renderCategorySelector();updateFormIntro();render();
+  }
   function slotAllowed(slot){
     const date=String(slot).slice(0,10),time=String(slot).slice(11),unavailable=Array.isArray(SCHEDULE?.unavailable)?SCHEDULE.unavailable:[];
     if(!DAYS.some(day=>day.date===date)||!TIMES.includes(time))return false;
     return !unavailable.some(rule=>rule?.date===date&&(!rule.start_time||!rule.end_time||(minutes(time)>=minutes(rule.start_time)&&minutes(time)<minutes(rule.end_time))));
   }
   function saveDraft(){
-    localStorage.setItem(draftKey,JSON.stringify({internalId:$("name").value,note:$("note").value,slots:[...selected].sort(),savedAt:new Date().toISOString()}));
+    localStorage.setItem(identityKey,$("name").value);
+    localStorage.setItem(draftKey(),JSON.stringify({note:$("note").value,slots:[...selected].sort(),savedAt:new Date().toISOString()}));
     sessionStorage.setItem(codeKey,$("group").value);
   }
   function restoreDraft(){
     let draft={};
-    try{draft=JSON.parse(localStorage.getItem(draftKey)||"{}")||{}}catch{draft={}}
-    $("name").value=String(draft.internalId||"");$("note").value=String(draft.note||"");$("group").value=sessionStorage.getItem(codeKey)||"";
+    try{draft=JSON.parse(localStorage.getItem(draftKey())||"{}")||{}}catch{draft={}}
+    $("name").value=localStorage.getItem(identityKey)||"";$("note").value=String(draft.note||"");$("group").value=sessionStorage.getItem(codeKey)||"";
     selected.clear();
     (Array.isArray(draft.slots)?draft.slots:[]).filter(slotAllowed).forEach(slot=>selected.add(slot));
     saveDraft();
@@ -127,7 +154,10 @@ if(document.body.dataset.page==="form"){
   $("group").addEventListener("input",saveDraft);
   $("edit-again").onclick=()=>$("success").classList.add("hidden");
   $("submit").disabled=true;
-  loadSchedule().then(()=>{restoreDraft();updateFormIntro();render();applyPauseState()}).catch(error=>{
+  loadSchedule().then(()=>{
+    const requested=new URLSearchParams(location.search).get("category");
+    activateCategory(requested||programCategories()[0]?.id,false);applyPauseState();
+  }).catch(error=>{
     toast("时间设置读取失败，请刷新页面");
     $("schedule-range").textContent="读取失败";$("schedule-year").textContent="—";
     $("schedule-detail").textContent=String(error.message||"").includes("超时")?"连接数据库超时，请检查网络后刷新页面。":"暂时无法读取当前开放时间。";
@@ -141,27 +171,30 @@ if(document.body.dataset.page==="form"){
     if(!selected.size)return toast("请至少选择一个时段");
     $("submit").disabled=true;$("submit").textContent="正在保存…";
     try{
-      await rpc("submit_program_review",{p_id:null,p_edit_token:null,p_name:internalId,p_group_name:modificationCode,p_note:$("note").value.trim(),p_slots:[...selected].sort()});
+      if(!activeCategory)return toast("请先选择节目类别");
+      await rpc("submit_program_review",{p_id:null,p_edit_token:null,p_name:internalId,p_group_name:modificationCode,p_note:$("note").value.trim(),p_slots:[...selected].sort(),p_category_id:activeCategory.id});
       saveDraft();
       $("success").classList.remove("hidden");window.scrollTo({top:0,behavior:"smooth"});
     }catch(error){
       const message=String(error.message||"");
-      toast(message.includes("questionnaire paused")?"问卷已暂停，当前无法提交":message.includes("modification code")?"社内称呼或修改码不正确":message.includes("slot")?"所选时间已不在当前开放范围，请刷新页面后重选":"保存失败，请稍后重试");
+      toast(message.includes("questionnaire paused")?"问卷已暂停，当前无法提交":message.includes("category")?"节目类别或可填写日期已经变化，请刷新页面":message.includes("modification code")?"社内称呼或修改码不正确":message.includes("slot")?"所选时间已不在当前开放范围，请刷新页面后重选":"保存失败，请稍后重试");
     }finally{applyPauseState()}
   };
 }
 
 if(document.body.dataset.page==="stats"){
-  let rows=[],records=[],active=null,currentView="heatmap",granularity=Number(localStorage.getItem("of29-stats-granularity")||30);
-  const person=()=>rows.find(row=>row.id===$("person-filter").value);
+  let rows=[],records=[],categoryDraft=[],active=null,currentView="heatmap",granularity=Number(localStorage.getItem("of29-stats-granularity")||30);
+  const categoryFilter=()=>$("category-filter").value;
+  const visibleRows=()=>categoryFilter()?rows.filter(row=>row.category_id===categoryFilter()):rows;
+  const person=()=>visibleRows().find(row=>row.id===$("person-filter").value);
   const adminKey=()=>$("admin-key").value||sessionStorage.getItem("of29-admin-key");
   function heat(count,max){if(!count)return"h0";const ratio=count/Math.max(max,1);return ratio>.8?"h5":ratio>.6?"h4":ratio>.4?"h3":ratio>.2?"h2":"h1"}
   function cell(slot,count,max,segment=false){const individual=Boolean(person()),className=segment?"heat-segment":"heat";return '<button class="'+className+" "+(individual?(count?"personal-on":"h0"):heat(count,max))+(active===slot?" active":"")+'" data-slot="'+slot+'"><strong>'+(count?(individual?"✓":count):"")+'</strong></button>'}
   function renderThirty(counts,max){return TIMES.map((time,i)=>'<div class="grid-row"><div class="time-label '+(i%2?"half":"")+'">'+(i%2?"":time)+'</div>'+DAYS.map(day=>{const slot=key(day.date,time);return cell(slot,counts.get(slot)||0,max)}).join("")+'</div>').join("")}
   function renderHours(counts,max){return HOURS.map(time=>{const index=TIMES.indexOf(time),secondTime=TIMES[index+1]||null;return '<div class="grid-row"><div class="time-label hour">'+time+'</div>'+DAYS.map(day=>{const first=key(day.date,time),second=secondTime?key(day.date,secondTime):null;return '<div class="hour-heat">'+cell(first,counts.get(first)||0,max,true)+(second?cell(second,counts.get(second)||0,max,true):'<span class="heat-segment h0 disabled"></span>')+'</div>'}).join("")+'</div>'}).join("")}
   function renderStats(){
-    const chosen=person(),source=chosen?[chosen]:rows,counts=new Map();source.forEach(p=>p.slots.forEach(slot=>counts.set(slot,(counts.get(slot)||0)+1)));const max=Math.max(0,...counts.values());
-    $("stats-heading").textContent=chosen?chosen.name+"的可到场时间":"各时段可到场人数";
+    const chosen=person(),source=chosen?[chosen]:visibleRows(),counts=new Map();source.forEach(p=>p.slots.forEach(slot=>counts.set(slot,(counts.get(slot)||0)+1)));const max=Math.max(0,...counts.values()),category=programCategory(categoryFilter());
+    $("stats-heading").textContent=chosen?chosen.name+"的可到场时间":category?category.name+" · 各时段可到场人数":"全部类别 · 各时段可到场人数";
     $("stats-description").textContent=chosen?"绿色表示该时段可以到场；点击格子查看具体时间。":"颜色越深，人数越多；点击格子查看名单。";
     $("heatmap").innerHTML=headers()+(granularity===30?renderThirty(counts,max):renderHours(counts,max))+'<div class="end-label">'+SCHEDULE.end_time+'</div>';
     applyGridColumns($("heatmap"));
@@ -176,17 +209,18 @@ if(document.body.dataset.page==="stats"){
       $("roster").innerHTML='<small>社内称呼</small><h2>'+escapeHtml(chosen.name)+'</h2><h3>'+(day?day.label:active.slice(0,10))+" "+time+"—"+addMinutes(time)+'</h3><div class="roster-count status"><b>'+(available?"可以到场":"无法到场")+'</b></div>'+note;return
     }
     if(!active){$("roster").innerHTML='<div class="empty"><b>▦</b><h2>选择一个时段</h2><p>点击热力表中的数字查看对应人员。</p></div>';return}
-    const people=rows.filter(p=>p.slots.includes(active)),day=DAYS.find(d=>active.startsWith(d.date)),time=active.slice(11);
-    $("roster").innerHTML='<small>所选时段</small><h2>'+(day?day.label:active.slice(0,10))+'</h2><h3>'+time+"—"+addMinutes(time)+'</h3><div class="roster-count"><b>'+people.length+'</b><span>人可到场</span></div><div class="people">'+people.map(p=>'<div class="person"><span class="avatar">'+escapeHtml(p.name.slice(0,1))+'</span><div><strong>'+escapeHtml(p.name)+'</strong><small>'+(p.note?escapeHtml(p.note):"无补充说明")+'</small></div></div>').join("")+'</div>';
+    const people=visibleRows().filter(p=>p.slots.includes(active)),day=DAYS.find(d=>active.startsWith(d.date)),time=active.slice(11);
+    $("roster").innerHTML='<small>所选时段</small><h2>'+(day?day.label:active.slice(0,10))+'</h2><h3>'+time+"—"+addMinutes(time)+'</h3><div class="roster-count"><b>'+people.length+'</b><span>人可到场</span></div><div class="people">'+people.map(p=>{const category=programCategory(p.category_id);return '<div class="person"><span class="avatar" style="--category-color:'+(category?.color||"#176e55")+'">'+escapeHtml(p.name.slice(0,1))+'</span><div><strong>'+escapeHtml(p.name)+'</strong><small>'+(category?escapeHtml(category.name)+" · ":"")+(p.note?escapeHtml(p.note):"无补充说明")+'</small></div></div>'}).join("")+'</div>';
   }
-  function populatePeople(){const current=$("person-filter").value;$("person-filter").innerHTML='<option value="">全部人员</option>'+[...rows].sort((a,b)=>a.name.localeCompare(b.name,"zh-CN")).map(p=>'<option value="'+p.id+'">'+escapeHtml(p.name)+'</option>').join("");if(rows.some(row=>row.id===current))$("person-filter").value=current}
+  function populateCategoryFilter(){const current=categoryFilter();$("category-filter").innerHTML='<option value="">全部类别</option>'+programCategories().map(item=>'<option value="'+escapeHtml(item.id)+'">'+escapeHtml(item.name)+'</option>').join("");if(programCategory(current))$("category-filter").value=current}
+  function populatePeople(){const current=$("person-filter").value,source=visibleRows();$("person-filter").innerHTML='<option value="">全部人员</option>'+[...source].sort((a,b)=>a.name.localeCompare(b.name,"zh-CN")).map(p=>{const category=programCategory(p.category_id);return '<option value="'+p.id+'">'+escapeHtml(p.name)+(categoryFilter()?"":" · "+escapeHtml(category?.name||"未分类"))+'</option>'}).join("");if(source.some(row=>row.id===current))$("person-filter").value=current}
   function formatDate(value){return new Date(value).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai",hour12:false})}
-  function slotLabel(slot){const day=DAYS.find(item=>slot.startsWith(item.date));return (day?day.label:slot.slice(5,10))+" "+slot.slice(11)}
+  function slotLabel(slot){const day=BASE_DAYS.find(item=>slot.startsWith(item.date));return (day?day.label:slot.slice(5,10))+" "+slot.slice(11)}
   function renderRecords(){
     $("records-count").textContent=records.length+" 条";
     $("delete-all-records").disabled=!records.length;
     if(!records.length){$("records-list").innerHTML='<div class="records-empty">目前没有提交记录</div>';return}
-    $("records-list").innerHTML=records.map(record=>{const code=record.modification_code||"";return '<article class="record-card" data-record-id="'+record.id+'"><div class="record-top"><div><small>社内称呼</small><strong>'+escapeHtml(record.internal_id)+'</strong></div><span class="code-badge '+(code?"":"unset")+'">'+(code?"修改码："+escapeHtml(code):"旧记录未保存明文")+'</span></div><div class="record-meta"><span>首次提交：'+formatDate(record.created_at)+'</span><span>最后更新：'+formatDate(record.updated_at)+'</span><span>'+record.slots.length+" 个半小时 · "+durationLabel(record.slots.length)+'</span></div><div class="record-slots">'+record.slots.map(slot=>'<span>'+slotLabel(slot)+'</span>').join("")+'</div>'+(record.note?'<div class="record-note">'+escapeHtml(record.note)+'</div>':"")+'<div class="record-editor"><label>社内称呼<input class="record-id-input" maxlength="30" value="'+escapeHtml(record.internal_id)+'"></label><label>修改码<input class="record-code-input" type="text" minlength="4" maxlength="50" value="'+escapeHtml(code)+'" placeholder="输入新修改码"></label><div class="record-actions"><button data-save-record="'+record.id+'">保存修改</button><button class="danger" data-delete-record="'+record.id+'">删除</button></div></div></article>'}).join("");
+    $("records-list").innerHTML=records.map(record=>{const code=record.modification_code||"",category=programCategory(record.category_id);return '<article class="record-card" data-record-id="'+record.id+'"><div class="record-top"><div><small>社内称呼</small><strong>'+escapeHtml(record.internal_id)+'</strong><span class="record-category" style="--category-color:'+(category?.color||"#64748b")+'">'+escapeHtml(category?.name||"未分类")+'</span></div><span class="code-badge '+(code?"":"unset")+'">'+(code?"修改码："+escapeHtml(code):"旧记录未保存明文")+'</span></div><div class="record-meta"><span>首次提交：'+formatDate(record.created_at)+'</span><span>最后更新：'+formatDate(record.updated_at)+'</span><span>'+record.slots.length+" 个半小时 · "+durationLabel(record.slots.length)+'</span></div><div class="record-slots">'+record.slots.map(slot=>'<span>'+slotLabel(slot)+'</span>').join("")+'</div>'+(record.note?'<div class="record-note">'+escapeHtml(record.note)+'</div>':"")+'<div class="record-editor"><label>社内称呼<input class="record-id-input" maxlength="30" value="'+escapeHtml(record.internal_id)+'"></label><label>修改码<input class="record-code-input" type="text" minlength="4" maxlength="50" value="'+escapeHtml(code)+'" placeholder="输入新修改码"></label><div class="record-actions"><button data-save-record="'+record.id+'">保存修改</button><button class="danger" data-delete-record="'+record.id+'">删除</button></div></div></article>'}).join("");
     document.querySelectorAll("[data-save-record]").forEach(button=>button.onclick=()=>saveRecord(button.dataset.saveRecord));
     document.querySelectorAll("[data-delete-record]").forEach(button=>button.onclick=()=>deleteRecord(button.dataset.deleteRecord));
   }
@@ -196,12 +230,14 @@ if(document.body.dataset.page==="stats"){
     $("schedule-start-time").value=SCHEDULE.start_time;$("schedule-end-time").value=SCHEDULE.end_time;
     $("schedule-current").textContent=scheduleSummary();
     $("schedule-intro-text").value=String(SCHEDULE.intro_text||"");
-    $("schedule-intro-text").placeholder="当前开放 "+DAYS.length+" 天，每天 "+SCHEDULE.start_time+"—"+SCHEDULE.end_time+"。";
+    $("schedule-intro-text").placeholder="当前开放 "+BASE_DAYS.length+" 天，每天 "+SCHEDULE.start_time+"—"+SCHEDULE.end_time+"。";
     $("schedule-paused").checked=Boolean(SCHEDULE.is_paused);
     $("pause-message").value=String(SCHEDULE.pause_message||"");
     $("pause-status").textContent=SCHEDULE.is_paused?"已暂停":"开放中";
     $("pause-status").classList.toggle("paused",Boolean(SCHEDULE.is_paused));
     renderDateNotesEditor();
+    categoryDraft=JSON.parse(JSON.stringify(programCategories()));
+    renderCategoryEditor();
   }
   async function savePause(){
     const paused=$("schedule-paused").checked,message=$("pause-message").value.trim(),button=$("save-pause");
@@ -224,8 +260,8 @@ if(document.body.dataset.page==="stats"){
   function renderDateNotesEditor(){
     const root=$("date-notes-fields");if(!root||!SCHEDULE)return;
     const notes=SCHEDULE.date_notes&&typeof SCHEDULE.date_notes==="object"?SCHEDULE.date_notes:{};
-    if(!DAYS.length){root.innerHTML='<div class="date-notes-empty">当前没有可显示的日期</div>';return}
-    root.innerHTML=DAYS.map(day=>'<label><span>'+day.weekday+' '+day.label+'</span><input data-date-note="'+day.date+'" maxlength="60" value="'+escapeHtml(notes[day.date]||"")+'" placeholder="例如：下午场、终审日"></label>').join("");
+    if(!BASE_DAYS.length){root.innerHTML='<div class="date-notes-empty">当前没有可显示的日期</div>';return}
+    root.innerHTML=BASE_DAYS.map(day=>'<label><span>'+day.weekday+' '+day.label+'</span><input data-date-note="'+day.date+'" maxlength="60" value="'+escapeHtml(notes[day.date]||"")+'" placeholder="例如：下午场、终审日"></label>').join("");
   }
   async function saveDateNotes(){
     const notes={};
@@ -236,6 +272,41 @@ if(document.body.dataset.page==="stats"){
       await loadData();toast("日期备注已更新");
     }catch(error){toast(String(error.message||"").includes("too long")?"单条备注最多 60 个字":"日期备注保存失败")}
     finally{button.disabled=false;button.textContent="保存日期备注"}
+  }
+  function categoryLink(id){const url=new URL("../",location.href);url.search="";url.searchParams.set("category",id);return url.href}
+  function renderCategoryEditor(){
+    const root=$("category-editor-list");
+    if(!root)return;
+    if(!categoryDraft.length){root.innerHTML='<div class="category-editor-empty">至少需要保留一个节目类别</div>';return}
+    root.innerHTML=categoryDraft.map((category,index)=>'<article class="category-editor-card" data-category-index="'+index+'" style="--category-color:'+escapeHtml(category.color||"#176e55")+'"><div class="category-editor-top"><input class="category-color-input" type="color" value="'+escapeHtml(category.color||"#176e55")+'" aria-label="类别颜色"><label>类别名称<input class="category-name-input" maxlength="30" value="'+escapeHtml(category.name)+'"></label><button class="copy-category-link" type="button">复制填写链接</button><button class="delete-category danger-button" type="button">删除</button></div><div class="category-date-grid">'+BASE_DAYS.map(day=>'<label><input type="checkbox" data-category-date="'+day.date+'" '+(category.dates.includes(day.date)?"checked":"")+'><span>'+day.weekday+'<strong>'+day.label+'</strong></span></label>').join("")+'</div></article>').join("");
+    root.querySelectorAll("[data-category-index]").forEach(card=>{
+      const index=Number(card.dataset.categoryIndex),category=categoryDraft[index];
+      card.querySelector(".category-name-input").oninput=e=>category.name=e.target.value;
+      card.querySelector(".category-color-input").oninput=e=>{category.color=e.target.value;card.style.setProperty("--category-color",e.target.value)};
+      card.querySelectorAll("[data-category-date]").forEach(box=>box.onchange=()=>{category.dates=[...card.querySelectorAll("[data-category-date]:checked")].map(item=>item.dataset.categoryDate)});
+      card.querySelector(".copy-category-link").onclick=async()=>{try{await navigator.clipboard.writeText(categoryLink(category.id));toast("已复制 "+category.name+" 的填写链接")}catch{window.prompt("复制这个填写链接：",categoryLink(category.id))}};
+      card.querySelector(".delete-category").onclick=()=>{
+        if(records.some(record=>record.category_id===category.id))return toast("该类别已有提交记录，暂时不能删除");
+        if(categoryDraft.length===1)return toast("至少需要保留一个节目类别");
+        categoryDraft.splice(index,1);renderCategoryEditor();
+      };
+    });
+  }
+  function addCategory(){
+    if(categoryDraft.length>=12)return toast("节目类别最多 12 个");
+    let id="category-"+Date.now().toString(36);while(categoryDraft.some(item=>item.id===id))id+="x";
+    categoryDraft.push({id,name:"新节目类别",color:["#176e55","#2563eb","#d97706","#9333ea"][categoryDraft.length%4],dates:BASE_DAYS.map(day=>day.date)});
+    renderCategoryEditor();
+  }
+  async function saveCategories(){
+    categoryDraft.forEach(item=>{item.name=String(item.name||"").trim()});
+    if(categoryDraft.some(item=>!item.name))return toast("请填写所有类别名称");
+    if(new Set(categoryDraft.map(item=>item.name.toLocaleLowerCase())).size!==categoryDraft.length)return toast("类别名称不能重复");
+    if(categoryDraft.some(item=>!item.dates.length))return toast("每个类别至少选择一个可填写日期");
+    const button=$("save-categories");button.disabled=true;button.textContent="正在保存…";
+    try{await rpc("update_program_review_categories",{p_admin_key:adminKey(),p_categories:categoryDraft});await loadData();toast("节目类别与独立填写链接已更新")}
+    catch(error){toast(String(error.message||"").includes("in use")?"已有提交记录的类别不能删除":"节目类别保存失败，请检查名称和日期")}
+    finally{button.disabled=false;button.textContent="保存节目类别"}
   }
   async function saveSchedule(){
     const startDate=$("schedule-start-date").value,endDate=$("schedule-end-date").value,startTime=$("schedule-start-time").value,endTime=$("schedule-end-time").value;
@@ -292,6 +363,7 @@ if(document.body.dataset.page==="stats"){
       rpc("get_program_review_stats",{p_admin_key:keyValue}),
       rpc("get_program_review_admin_records",{p_admin_key:keyValue})
     ]);
+    populateCategoryFilter();useCategoryDays(categoryFilter());
     $("total").textContent=rows.length+" 份提交";populatePeople();renderStats();renderRoster();renderRecords();fillScheduleEditor();setView(currentView);
   }
   async function load(){
@@ -300,6 +372,7 @@ if(document.body.dataset.page==="stats"){
     catch{$("login-error").textContent="管理员密钥不正确，或网络连接失败。"}
   }
   bindSwitch("stats-granularity",granularity,next=>{granularity=next;localStorage.setItem("of29-stats-granularity",next);renderStats()});
+  $("category-filter").onchange=()=>{active=null;useCategoryDays(categoryFilter());populatePeople();renderStats();renderRoster()};
   $("person-filter").onchange=()=>{active=null;renderStats();renderRoster()};
   $("load-stats").onclick=load;$("admin-key").onkeydown=e=>{if(e.key==="Enter")load()};
   $("refresh").onclick=()=>loadData().catch(()=>toast("刷新失败"));
@@ -309,6 +382,8 @@ if(document.body.dataset.page==="stats"){
   $("save-pause").onclick=savePause;
   $("save-intro-text").onclick=saveIntroText;
   $("save-date-notes").onclick=saveDateNotes;
+  $("add-category").onclick=addCategory;
+  $("save-categories").onclick=saveCategories;
   $("show-heatmap").onclick=()=>setView("heatmap");$("show-records").onclick=()=>setView("records");$("show-schedule").onclick=()=>setView("schedule");
   if(sessionStorage.getItem("of29-admin-key")){$("admin-key").value=sessionStorage.getItem("of29-admin-key");load()}
 }

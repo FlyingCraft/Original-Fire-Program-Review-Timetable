@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>节目审核 · 到场统计</title>
-  <link rel="stylesheet" href="../assets/styles.css?v=17">
+  <link rel="stylesheet" href="../assets/styles.css?v=18">
   <link rel="stylesheet" href="../assets/unavailable.css?v=2">
 </head>
 <body data-page="stats">
@@ -14,7 +14,7 @@
     <section id="login-card" class="login-card"><h2>负责人验证</h2><p>输入管理员密钥后读取统计数据。密钥只在本次浏览器会话中保存。</p><div><input id="admin-key" type="password" placeholder="管理员密钥"><button id="load-stats">进入管理界面</button></div><small id="login-error"></small></section>
     <nav id="admin-tabs" class="admin-tabs hidden"><button id="show-heatmap" class="active">热力统计</button><button id="show-records">提交记录</button><button id="show-schedule">时间设置</button></nav>
     <section id="stats-card" class="card stats-card hidden">
-      <div class="stats-title"><div><h2 id="stats-heading">各时段可到场人数</h2><p id="stats-description">颜色越深，人数越多；点击格子查看名单。</p></div><div class="stats-controls"><label class="person-filter">查看社内称呼<select id="person-filter"><option value="">全部人员</option></select></label><div id="stats-granularity" class="view-switch" aria-label="时间粒度"><button class="active" data-minutes="30">30 分钟</button><button data-minutes="60">1 小时</button></div><button id="refresh" class="refresh-button">刷新</button></div></div>
+      <div class="stats-title"><div><h2 id="stats-heading">各时段可到场人数</h2><p id="stats-description">颜色越深，人数越多；点击格子查看名单。</p></div><div class="stats-controls"><label class="category-filter">节目类别<select id="category-filter"><option value="">全部类别</option></select></label><label class="person-filter">查看社内称呼<select id="person-filter"><option value="">全部人员</option></select></label><div id="stats-granularity" class="view-switch" aria-label="时间粒度"><button class="active" data-minutes="30">30 分钟</button><button data-minutes="60">1 小时</button></div><button id="refresh" class="refresh-button">刷新</button></div></div>
       <div class="table-scroll"><div id="heatmap" class="time-grid"></div></div>
     </section>
     <section id="records-card" class="card records-card hidden">
@@ -46,11 +46,16 @@
         <div id="date-notes-fields" class="date-notes-fields"></div>
         <div class="date-notes-actions"><p>每个日期最多 60 个字；留空并保存即可删除备注。</p><button id="save-date-notes" type="button">保存日期备注</button></div>
       </section>
+      <section class="category-editor">
+        <div class="category-editor-heading"><div><h3>节目类别与填写链接</h3><p>每个类别可以使用不同日期，提交后仍会汇总到同一张统计表。</p></div><button id="add-category" type="button">新增类别</button></div>
+        <div id="category-editor-list" class="category-editor-list"></div>
+        <div class="category-editor-actions"><p>复制类别链接分别发给对应人员；已有提交记录的类别不能直接删除。</p><button id="save-categories" type="button">保存节目类别</button></div>
+      </section>
     </section>
     <aside id="roster" class="roster hidden"><div class="empty"><b>▦</b><h2>选择一个时段</h2><p>点击热力表中的数字查看对应人员。</p></div></aside>
   </main>
   <div id="toast" class="toast hidden"></div>
-  <script src="../assets/app.js?v=20"></script>
+  <script src="../assets/app.js?v=21"></script>
   <script src="../assets/unavailable.js?v=4"></script>
 </body>
 </html>
